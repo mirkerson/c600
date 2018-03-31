@@ -68,9 +68,14 @@ int print_cpuinfo(void)
 
 int checkcpu(void)
 {
+
+/*  modify by kerson , do not check cpu bonding id
+    
     volatile int sys_ctrl_reg = 0;
     sys_ctrl_reg = 0x01c00000 + 0x28;
     if(2 != readl(sys_ctrl_reg))
         while(1);
+*/
+
     return 0;
 }

@@ -81,8 +81,8 @@ twi_sda         = port:PD00<3><default><default><default>
 
 [uart_para]
 uart_debug_port = 1
-uart_debug_tx   = port:PA2<5><1><default><default>
-uart_debug_rx   = port:PA3<5><1><default><default>
+uart_debug_tx   = port:PA3<5><1><default><default>
+uart_debug_rx   = port:PA2<5><1><default><default>
 
 
 [jtag_para]
@@ -139,7 +139,7 @@ twi1_scl         = port:PB00<2><default><default><default>
 twi1_sda         = port:PB01<2><default><default><default>
 
 [twi2]
-twi2_used        = 1
+twi2_used        = 0
 twi2_scl         = port:PE0<4><default><default><default>
 twi2_sda         = port:PE1<4><default><default><default>
 
@@ -156,18 +156,18 @@ twi2_sda         = port:PE1<4><default><default><default>
 ;uart_type ---  2 (2 wire), 4 (4 wire), 8 (8 wire, full function)
 ;----------------------------------------------------------------------------------
 [uart0]
-uart0_used       = 0
+uart0_used       = 1
 uart0_port       = 0
 uart0_type       = 2
-uart0_tx         = port:PF2<3><1><default><default>
-uart0_rx         = port:PF4<3><1><default><default>
+uart0_tx         = port:PE1<5><1><default><default>
+uart0_rx         = port:PE0<5><1><default><default>
 
 [uart1]
 uart1_used       = 1
 uart1_port       = 1
 uart1_type       = 2
-uart1_tx         = port:PA2<5><1><default><default>
-uart1_rx         = port:PA3<5><1><default><default>
+uart1_tx         = port:PA3<5><1><default><default>
+uart1_rx         = port:PA2<5><1><default><default>
 
 ;----------------------------------------------------------------------------------
 ;SPI controller configuration
