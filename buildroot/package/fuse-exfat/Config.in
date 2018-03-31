@@ -1,0 +1,10 @@
+config BR2_PACKAGE_FUSE_EXFAT
+	bool "fuse-exfat"
+	depends on BR2_PACKAGE_LIBFUSE
+	help
+	  fuse-exfat (Free exFAT file system implementation)
+
+	  http://code.google.com/p/exfat/
+
+comment "fuse-exfat requires libfuse support"
+        depends on BR2_PACKAGE_LIBFUSE

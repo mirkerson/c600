@@ -1,0 +1,122 @@
+/*
+ * (C) Copyright 2014
+ * young, guoyingyang@allwinnertech.com
+ *
+ * See file CREDITS for list of people who contributed to this
+ * project.
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ * MA 02111-1307 USA
+ */
+
+/* This code should work for both the S3C2400 and the S3C2410
+ * as they seem to have the same I2C controller inside.
+ * The different address mapping is handled by the s3c24xx.h files below.
+ */
+#include "axp15_ctrl.h"
+
+
+static  int pmu_probe(void)
+{
+	u8 pmu_type;
+	__msdelay(100);
+	if(i2c_read(AXP15_ADDR,BOOT_POWER15_VERSION,1,&pmu_type,1))
+	{
+		UART_printf2("axp152 read error!!\n");
+		return -1;
+	}
+	pmu_type &= 0x0f;
+	if(pmu_type == 0x05)
+	{
+		UART_printf2(" PMU : axp152\n");
+		return 0;
+	}
+	return -1;
+}
+
+int pmu_init(void)
+{
+	i2c_init(400000);
+	UART_printf2("pmu initing ......\n");
+	if(pmu_probe())
+	{
+		UART_printf2("pmu probe error!!!\n");
+		return -1;
+	}
+	return 0;
+}
+int check_pmu_id(u8 id)
+{
+	u8 pmu_id = 0x00;
+	u8 reg_value = 0x01;
+	if(i2c_write(AXP15_ADDR,0xff,1,&reg_value,1))
+	{
+		UART_printf2("sunxi pmu error : unable to write 0xff to pmu\n ");
+	}
+	if(i2c_read(AXP15_ADDR,0x06,1,&pmu_id,1))
+	{
+		UART_printf2("sunxi pmu error : unable to read pmu_id  \n");
+		return -1;
+	}
+	reg_value = 0x00;
+	if(i2c_write(AXP15_ADDR,0xff,1,&reg_value,1))
+	{
+		UART_printf2("sunxi pmu error : unable to write 0x00 to pmu  \n");
+		return -1;
+	}
+	pmu_id &= 0x1f; 
+	UART_printf2(" pmu_id = %x\n",pmu_id);
+	
+	if(pmu_id == id)
+	{
+		UART_printf2("check id success \n");
+
+		return 0;
+	}
+        UART_printf2("check id error  \n");
+	return -1;
+}
+int pmu_set_ddr_vol_onoff(int onoff)
+{
+	u8 reg_value;
+	if(onoff<0)
+	{
+		return 0;
+	}
+	if(i2c_read(AXP15_ADDR,BOOT_POWER15_OUTPUT_CTL,1,&reg_value,1))
+	{
+		UART_printf2("sunxi pmu error : unable to onoff ddr\n");
+		return -1;
+	}
+	UART_printf2("reg_value = %x\n",reg_value);
+	if(onoff == 0)
+	{
+		reg_value &= ~(1<<5);
+	}
+	else
+	{
+		reg_value |= (1<<5);
+	}
+
+	if(i2c_write(AXP15_ADDR,BOOT_POWER15_OUTPUT_CTL,1, &reg_value,1))
+	{
+		UART_printf2("sunxi pmu error : unable to onoff ddr\n");
+		return -1;
+	}
+	i2c_read(AXP15_ADDR,BOOT_POWER15_OUTPUT_CTL,1, &reg_value,1);
+	UART_printf2(" after reg_value = %x\n",reg_value);
+
+	return 0;
+}

@@ -1,0 +1,14 @@
+Here are some (hopefully) useful scripts to help create and
+present benchmark data.
+
+makeimages.pl takes the same parameters as tiobench.pl and uses
+gnuplot to create a graph of read rate vs. thread count.
+
+bigbench.sh is a shell script which servers as an example how to
+automatize big benchmarks runs with different set of parameters
+and even different programs
+
+The more scripts, the better, and feedback on the scripts available
+is always welcome.
+
+-- James <jmm@users.sf.net>

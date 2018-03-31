@@ -1,0 +1,5 @@
+config BR2_PACKAGE_SW_TOOLS
+       bool "sw-tools"
+       depends on BR2_KERNEL_HEADER
+       help
+         Some useful tools from sw

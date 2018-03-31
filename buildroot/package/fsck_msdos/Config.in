@@ -1,0 +1,4 @@
+config BR2_PACKAGE_FSCK_MSDOS
+	bool "fsck msdos"
+	help
+	Fsck msdos from android

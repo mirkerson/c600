@@ -1,0 +1,553 @@
+/*
+ * sound\soc\sunxi\sunx8iw10_sndcodec.c
+ * (C) Copyright 2014-2017
+ * allwinner Technology Co., Ltd. <www.allwinnertech.com>
+ * huangxin <huangxin@allwinnertech.com>
+  *
+ * some simple description for this code
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ */
+#include <linux/module.h>
+#include <linux/clk.h>
+#include <linux/mutex.h>
+#include <linux/gpio.h>
+#include <linux/io.h>
+#include <linux/input.h>
+#include <sound/pcm.h>
+#include <sound/soc.h>
+#include <sound/jack.h>
+#include <linux/of.h>
+#include <sound/pcm_params.h>
+#include <linux/sys_config.h>
+#include <linux/of_gpio.h>
+#include <linux/of_irq.h>
+#include <sound/soc-dapm.h>
+#include "sunivw1p1_codec.h"
+#include <linux/delay.h>
+
+#include "sunxi_rw_func.h"
+
+
+#if 0 //xxw
+static struct snd_soc_jack jack;
+static int jack_irq = -1;
+static struct snd_soc_jack_gpio jack_gpio = {
+		.name = "headphone detc",
+		.report = SND_JACK_HEADPHONE | SND_JACK_MECHANICAL,
+		.debounce_time = 200,
+};
+
+static const struct snd_kcontrol_new ac_pin_controls[] = {
+	SOC_DAPM_PIN_SWITCH("External Speaker"),
+	SOC_DAPM_PIN_SWITCH("Headphone"),
+};
+
+static const struct snd_soc_dapm_widget sunxi_ac_dapm_widgets[] = {
+	SND_SOC_DAPM_MIC("External MainMic", NULL),
+};
+
+static const struct snd_soc_dapm_route audio_map[] = {
+	{"MainMic Bias", NULL, "External MainMic"},
+	{"MIC1P", NULL, "MainMic Bias"},
+	{"MIC1N", NULL, "MainMic Bias"},
+};
+#endif
+/*
+ * Card initialization
+ */
+static int sunxi_audio_init(struct snd_soc_pcm_runtime *runtime)
+{   
+    printk("----->sunxi_audio_init\n");
+    #if 0 //xxw
+	struct snd_soc_codec *codec = runtime->codec;
+//	struct snd_soc_dapm_context *dapm = &codec->dapm;
+	int ret;
+
+//	snd_soc_dapm_disable_pin(&codec->dapm,	"HPOUTR");
+//	snd_soc_dapm_disable_pin(&codec->dapm,	"HPOUTL");
+//	snd_soc_dapm_disable_pin(&codec->dapm,	"SPKL");
+//	snd_soc_dapm_disable_pin(&codec->dapm,	"SPKR");
+
+//	snd_soc_dapm_disable_pin(&runtime->card->dapm,	"External Speaker");
+//	snd_soc_dapm_sync(dapm);
+
+	if(jack_gpio.gpio < 0 || jack_irq <= 0) {
+		printk("no jack gpio or irq\n");
+		return 0;
+	}
+
+#if 1
+	/* Headset jack detection */
+	ret = snd_soc_jack_new(codec, "Headset Jack",
+			SND_JACK_HEADPHONE | SND_JACK_MECHANICAL,
+			&jack);
+
+	if (ret)
+		return ret;
+
+//	ret = snd_soc_jack_add_pins(&jack, ARRAY_SIZE(jack_pins), jack_pins);
+//	if (ret)
+//		return ret;
+
+	ret = snd_soc_jack_add_gpio(&jack, jack_irq, &jack_gpio);
+	if (ret)
+		return ret;
+
+	#endif
+	printk("request jack ok!\n");
+#endif	
+	return 0;
+}
+
+
+typedef struct __MCLK_SET_INF
+{
+    __u32       samp_rate;      // sample rate
+    __u16       mult_fs;        // multiply of smaple rate
+
+    __u8        clk_div;        // mpll division
+    __u8        mpll;           // select mpll, 0 - 24.576 Mhz, 1 - 22.5792 Mhz
+
+} __mclk_set_inf;
+
+
+
+typedef struct __BCLK_SET_INF
+{
+    __u8        bitpersamp;     // bits per sample
+    __u8        clk_div;        // clock division
+    __u16       mult_fs;        // multiplay of sample rate
+
+} __bclk_set_inf;
+
+
+static __bclk_set_inf BCLK_INF[] =
+{
+    // 16bits per sample
+    {16,  4, 128}, {16,  6, 192}, {16,  8, 256},
+    {16, 12, 384}, {16, 16, 512},
+
+    //24 bits per sample
+    {24,  4, 192}, {24,  8, 384}, {24, 16, 768},
+
+    //32 bits per sample
+    {32,  2, 128}, {32,  4, 256}, {32,  6, 384},
+    {32,  8, 512}, {32, 12, 768},
+
+    //end flag
+    {0xff, 0, 0},
+};
+
+static __mclk_set_inf  MCLK_INF[] =
+{
+    // 8k bitrate
+    {  8000, 128, 24, 0}, {  8000, 192, 16, 0}, {  8000, 256, 12, 0},
+    {  8000, 384,  8, 0}, {  8000, 512,  6, 0}, {  8000, 768,  4, 0},
+
+    // 16k bitrate
+    { 16000, 128, 12, 0}, { 16000, 192,  8, 0}, { 16000, 256,  6, 0},
+    { 16000, 384,  4, 0}, { 16000, 768,  2, 0},
+
+    // 32k bitrate
+    { 32000, 128,  6, 0}, { 32000, 192,  4, 0}, { 32000, 384,  2, 0},
+    { 32000, 768,  1, 0},
+
+    // 64k bitrate
+    { 64000, 192,  2, 0}, { 64000, 384,  1, 0},
+
+    //128k bitrate
+    {128000, 192,  1, 0},
+
+    // 12k bitrate
+    { 12000, 128, 16, 0}, { 12000, 256, 8, 0}, { 12000, 512, 4, 0},
+
+    // 24k bitrate
+    { 24000, 128,  8, 0}, { 24000, 256, 4, 0}, { 24000, 512, 2, 0},
+
+    // 48K bitrate
+    { 48000, 128,  4, 0}, { 48000, 256,  2, 0}, { 48000, 512, 1, 0},
+	//{ 48000, 512, 1, 0}, { 48000, 256,  2, 0}, { 48000, 128,  4, 0},
+
+    // 96k bitrate
+    { 96000, 128 , 2, 0}, { 96000, 256,  1, 0},
+	//{ 96000, 256,  1, 0}, { 96000, 128 , 2, 0},
+
+    //192k bitrate
+    {192000, 128,  1, 0},
+
+    //11.025k bitrate
+    { 11025, 128, 16, 1}, { 11205, 256,  8, 1}, { 11205, 512,  4, 1},
+
+    //22.05k bitrate
+    { 22050, 128,  8, 1}, { 22050, 256,  4, 1},
+    { 22050, 512,  2, 1}, 
+
+    //44.1k bitrate
+    { 44100, 128,  4, 1}, { 44100, 256,  2, 1}, { 44100, 512,  1, 1},
+
+    //88.2k bitrate
+    { 88200, 128,  2, 1}, { 88200, 256,  1, 1},
+
+    //176.4k bitrate
+    {176400, 128, 1, 1},
+
+    //end flag 0xffffffff
+    {0xffffffff, 0, 0, 0},
+};
+
+
+static s32 get_clock_divder(u32 sample_rate, u32 sample_width, u32 * mclk_div, u32* mpll, u32* bclk_div, u32* mult_fs)
+{
+	u32 i, j, ret = -EINVAL;
+
+	for(i=0; i< 100; i++) {
+		 if((MCLK_INF[i].samp_rate == sample_rate) && 
+		 	((MCLK_INF[i].mult_fs == 512) || (MCLK_INF[i].mult_fs == 256) || (MCLK_INF[i].mult_fs == 128))) {
+			  for(j=0; j<ARRAY_SIZE(BCLK_INF); j++) {
+                //printk("rate:%u,mult_fs:%u,b_mult:%u,j:%u,i:%u\n",MCLK_INF[i].samp_rate,MCLK_INF[i].mult_fs,BCLK_INF[j].mult_fs,j,i);
+					if((BCLK_INF[j].bitpersamp == sample_width) && 
+						(BCLK_INF[j].mult_fs == MCLK_INF[i].mult_fs)) {
+						 //set mclk and bclk division
+						 *mclk_div = MCLK_INF[i].clk_div;
+						 *mpll     = MCLK_INF[i].mpll;
+						 *bclk_div = BCLK_INF[j].clk_div;
+						 *mult_fs  = MCLK_INF[i].mult_fs;
+						 ret = 0;
+						 return ret;
+					}
+			  }
+		 }
+		 else if(MCLK_INF[i].samp_rate == 0xffffffff)
+		 	break;
+	}
+
+	return ret;
+}
+
+#define xxw_test
+#ifdef  xxw_test //xxw 20160118 mod
+
+static int sunxi_sndpcm_hw_params(struct snd_pcm_substream *substream,
+                                       struct snd_pcm_hw_params *params)
+{
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	int ret = 0;
+	unsigned long rate = params_rate(params);
+	u32 mclk_div=0, mpll=0, bclk_div=0, mult_fs=0;
+
+	printk("\nsunxi_sndpcm_hw_params XXW\n");
+
+	if(get_clock_divder(rate, 32, &mclk_div, &mpll, &bclk_div, &mult_fs))
+    {
+        printk("rate: %u get clock failed!\n", rate);
+    }
+    else
+    {
+        printk("rate: %u,mclk_div:%u,mult:%u, b_div: %u,get clock success!\n", rate,mclk_div,mult_fs,bclk_div);
+    }
+	
+	printk("\nsnd_soc_dai_set_fmt1111\n");
+	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
+			SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	if (ret < 0)
+		return ret;
+	
+    printk("\nsnd_soc_dai_set_fmt22222222\n");
+	ret = snd_soc_dai_set_fmt(cpu_dai, SND_SOC_DAIFMT_I2S |
+			SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	if (ret < 0)
+		return ret;
+
+	u32 freq_in = 22579200;
+    printk("set sysclk for cpu_dai cpu mpll=%u\n",mpll);
+	ret = snd_soc_dai_set_sysclk(cpu_dai, 0 , freq_in, 0);
+	//ret = snd_soc_dai_set_sysclk(cpu_dai, 0 , mpll, 0);
+	if (ret < 0)
+		return ret;
+		
+    printk("set sysclk for codec_dai codec\n");
+	ret = snd_soc_dai_set_sysclk(codec_dai, 0 , 1, 0);
+	//ret = snd_soc_dai_set_sysclk(codec_dai, 0 , mpll, 0);
+	if (ret < 0)
+		return ret;
+
+	#if 1
+    printk("\nsnd_soc_dai_set_clkdiv  mclk_div\n");
+	ret = snd_soc_dai_set_clkdiv(cpu_dai, 0, mclk_div);
+	if (ret < 0)
+		return ret;
+	
+	printk("\nsnd_soc_dai_set_clkdiv  bclk_div\n");
+	ret = snd_soc_dai_set_clkdiv(cpu_dai, 1, bclk_div);
+	if (ret < 0)
+		return ret;
+	
+	printk("\nsnd_soc_dai_set_clkdiv333\n");
+	ret = snd_soc_dai_set_clkdiv(codec_dai, 0, mult_fs);
+	if (ret < 0)
+		return ret;
+	#endif
+
+	return 0;
+}
+
+
+#else
+static int sunxi_sndpcm_hw_params(struct snd_pcm_substream *substream,
+                                       struct snd_pcm_hw_params *params)
+{
+	int ret  = 0;
+	u32 freq_in = 22579200;
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	unsigned long sample_rate = params_rate(params);
+    printk("\nsunxi_sndpcm_hw_params\n");
+	switch (sample_rate) {
+		case 8000:
+		case 16000:
+		case 32000:
+		case 64000:
+		case 128000:
+		case 12000:
+		case 24000:
+		case 48000:
+		case 96000:
+		case 192000:
+			freq_in = 24576000;
+			break;
+	}
+
+	/*set system clock source freq_in and set the mode as tdm or pcm*/
+	ret = snd_soc_dai_set_sysclk(cpu_dai, 0, freq_in, 0);
+	if (ret < 0) {
+		pr_err("err:%s,set codec dai sysclk faided.\n", __func__);
+		return ret;
+	}
+
+	printk("\snd_soc_dai_set_sysclk\n");
+	/*
+	* codec: slave. AP: master
+	*/
+	ret = snd_soc_dai_set_fmt(codec_dai, SND_SOC_DAIFMT_I2S |
+			SND_SOC_DAIFMT_NB_NF | SND_SOC_DAIFMT_CBS_CFS);
+	if (ret < 0) {
+		pr_err("%s,set codec dai fmt failed.\n", __func__);
+		return ret;
+	}
+    printk("\snd_soc_dai_set_fmt\n");
+    #if 0
+	ret = snd_soc_dai_set_clkdiv(cpu_dai, 0, sample_rate);
+	if (ret < 0) {
+		pr_err("%s, set cpu dai clkdiv faided.\n", __func__);
+		return ret;
+	}
+     #endif
+	return 0;
+}
+#endif
+static struct snd_soc_ops sunxi_sndpcm_ops = {
+       .hw_params              = sunxi_sndpcm_hw_params,
+};
+
+static struct snd_soc_dai_link sunxi_sndpcm_dai_link[] = {
+	{
+	.name 			= "audiocodeci2s",
+	.stream_name 	= "SUNXI-CODEC",
+	.cpu_dai_name 	= "sunxi-daudio",
+	.platform_name 	= "sunxi-daudio",
+	.codec_dai_name = "STA33X",
+	//.codec_name 	= "sta339.2-0038",
+	//.codec_name 	= "sta32x.1-001c",
+	.codec_name 	= "sta339.2-001c",
+	.init 			= sunxi_audio_init,
+    .ops 			= &sunxi_sndpcm_ops,
+	},
+};
+
+static struct snd_soc_card snd_soc_sunxi_sndpcm = {
+	.name 		= "audiocodeci2s",
+	.owner 		= THIS_MODULE,
+	.dai_link 	= sunxi_sndpcm_dai_link,
+	.num_links 	= ARRAY_SIZE(sunxi_sndpcm_dai_link),
+#if 0
+	.dapm_widgets = sunxi_ac_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(sunxi_ac_dapm_widgets),
+	.dapm_routes = audio_map,
+	.num_dapm_routes = ARRAY_SIZE(audio_map),
+	.controls = ac_pin_controls,
+	.num_controls = ARRAY_SIZE(ac_pin_controls),
+#endif
+};
+
+static int sunxi_machine_probe(struct platform_device *pdev)
+{
+	int ret = 0;
+	struct device_node *np = pdev->dev.of_node;
+	struct gpio_config config;
+	unsigned int gpio_pdn;
+	unsigned int gpio_reset;
+
+	if (!np) {
+		dev_err(&pdev->dev,
+			"can not get dt node for this device.\n");
+		return -EINVAL;
+	}
+
+	printk("\n----sunxi_machine_probe start------\n");
+	/* register the soc card */
+	snd_soc_sunxi_sndpcm.dev = &pdev->dev;
+	platform_set_drvdata(pdev, &snd_soc_sunxi_sndpcm);
+
+	sunxi_sndpcm_dai_link[0].cpu_dai_name = NULL;
+	sunxi_sndpcm_dai_link[0].cpu_of_node = of_parse_phandle(np,
+				"sunxi,cpudai-controller-i2s", 0);
+	if (!sunxi_sndpcm_dai_link[0].cpu_of_node) {
+		dev_err(&pdev->dev,
+			"Property 'sunxi,cpudai-controller' missing or invalid\n");
+			ret = -EINVAL;
+			goto err1;
+	}
+	sunxi_sndpcm_dai_link[0].platform_name = NULL;
+	sunxi_sndpcm_dai_link[0].platform_of_node = sunxi_sndpcm_dai_link[0].cpu_of_node;
+
+	//sunxi_sndpcm_dai_link[0].codec_name = NULL;
+
+    #if 0
+    /*******xxw add*****/
+    
+	gpio_pdn = of_get_named_gpio_flags(np, "sta33x_pwrdn_gpio", 0, (enum of_gpio_flags *)&config);
+	if (!gpio_is_valid(gpio_pdn)) {
+		pr_err("failed to get sta33x_pwrdn_gpio from dts,sta33x_pwrdn_gpio:%d\n",gpio_pdn);
+		gpio_pdn =-1;
+	} else {
+		printk("--->get sta33x_pwrdn_gpio gpio:%d\n", gpio_pdn);
+		gpio_request(gpio_pdn, "sta33x_pwrdn_gpio");
+		gpio_direction_output(gpio_pdn, 1);
+		gpio_set_value(gpio_pdn, 1);
+
+	}
+
+    
+	gpio_reset = of_get_named_gpio_flags(np, "sta33x_reset_gpio", 0, (enum of_gpio_flags *)&config);
+	if (!gpio_is_valid(gpio_reset)) {
+		pr_err("failed to get  sta33x_reset_gpio  from dts, sta33x_reset_gpio :%d\n",gpio_reset);
+		gpio_pdn =-1;
+	} else {
+		printk("--->get  sta33x_reset_gpio  gpio:%d\n", gpio_reset);
+		gpio_request(gpio_reset, "sta33x_reset_gpio");
+		gpio_direction_output(gpio_reset, 1);
+		gpio_set_value(gpio_reset, 0);
+		msleep(5);
+		gpio_set_value(gpio_reset, 1);
+
+	}
+    
+	
+	snd_soc_sunxi_sndpcm.drvdata = (void *)gpio_reset;
+	
+    /*******xxw add*****/
+    #endif
+
+	#if 0 //xxw
+	sunxi_sndpcm_dai_link[0].codec_of_node = of_parse_phandle(np,"sunxi,audio-codec-i2s", 0);
+	if (!sunxi_sndpcm_dai_link[0].codec_of_node) {
+		dev_err(&pdev->dev,
+			"Property 'sunxi,audio-codec' missing or invalid\n");
+		ret = -EINVAL;
+		goto err1;
+	}
+	
+	
+	sunxi_sndpcm_dai_link[0].codec_of_node = of_parse_phandle(np,"sunxi,audio-codec", 0);
+	if (!sunxi_sndpcm_dai_link[0].codec_of_node) {
+		dev_err(&pdev->dev,
+			"Property 'sunxi,audio-codec' missing or invalid\n");
+		ret = -EINVAL;
+		goto err1;
+	}
+
+	
+	jack_gpio.gpio = of_get_named_gpio_flags(np, "headphone-dect", 0, (enum of_gpio_flags *)&config);
+	if (!gpio_is_valid(jack_gpio.gpio)) {
+		pr_err("failed to get headphone-dect gpio from dts,headphone-dect:%d\n",jack_gpio.gpio);
+		jack_gpio.gpio =-1;
+	} else {
+		printk("get headphone-dect gpio:%d\n", jack_gpio.gpio);
+		jack_irq = gpio_to_irq(jack_gpio.gpio);
+		if(jack_irq == 0) {
+			printk("get headphone-dect error:%d\n", jack_irq);
+		}else {
+			printk("\nget headphone-dect irq:%d\n", jack_irq);
+		}
+	}
+    #endif 
+    //printk("\nsnd_soc_sunxi_sndpcm=%s\n",snd_soc_sunxi_sndpcm.dai_link->codec_name);
+	ret = snd_soc_register_card(&snd_soc_sunxi_sndpcm);
+	if (ret) {
+		pr_err("\nsnd_soc_register_card failed %d\n", ret);
+		goto err1;
+	}
+    printk("\nnd_soc_register_card end\n");
+	 
+	printk("\n----sunxi_machine_probe end------\n");
+	return 0;
+
+err1:
+	snd_soc_unregister_component(&pdev->dev);
+	return ret;
+}
+
+static const struct of_device_id sunxi_machine_of_match[] = {
+	{ .compatible = "allwinner,sunxi-codec-machine-i2s", },
+	{},
+};
+
+/*method relating*/
+static struct platform_driver sunxi_machine_driver = {
+	.driver = {
+		.name  = "sunxi-codec-machine-i2s",
+		.owner = THIS_MODULE,
+		.pm    = &snd_soc_pm_ops,
+		.of_match_table = sunxi_machine_of_match,
+	},
+	.probe = sunxi_machine_probe,
+};
+
+static int __init sunxi_machine_i2s_init(void)
+{
+	int err = 0;
+	int ret = 0;
+
+	
+	printk("\n-----[I2S]sunxi_machine_i2s_init register i2s------\n");
+	if ((err = platform_driver_register(&sunxi_machine_driver)) < 0)
+		return err;
+
+
+
+	return 0;
+}
+
+
+static void __exit sunxi_machine_i2s_exit(void)
+{
+	platform_driver_unregister(&sunxi_machine_driver);
+	
+}
+
+
+module_init(sunxi_machine_i2s_init);
+module_exit(sunxi_machine_i2s_exit);
+
+MODULE_AUTHOR("xxw");
+MODULE_DESCRIPTION("SUNXI_snd I2S ALSA SoC audio driver");
+MODULE_LICENSE("GPL");
+

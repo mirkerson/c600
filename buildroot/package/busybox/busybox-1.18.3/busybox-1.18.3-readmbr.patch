@@ -1,0 +1,187 @@
+diff -Nrc busybox-1.18.3__/include/applets.src.h busybox-1.18.3/include/applets.src.h
+*** busybox-1.18.3__/include/applets.src.h	2011-11-10 22:48:14.274603713 +0800
+--- busybox-1.18.3/include/applets.src.h	2011-11-10 23:30:31.466275000 +0800
+***************
+*** 284,289 ****
+--- 284,290 ----
+  IF_RDEV(APPLET(rdev, _BB_DIR_USR_SBIN, _BB_SUID_DROP))
+  IF_READAHEAD(APPLET(readahead, _BB_DIR_USR_BIN, _BB_SUID_DROP))
+  IF_READLINK(APPLET(readlink, _BB_DIR_USR_BIN, _BB_SUID_DROP))
++ IF_READMBR(APPLET(readmbr, _BB_DIR_USR_BIN, _BB_SUID_DROP))
+  IF_READPROFILE(APPLET(readprofile, _BB_DIR_USR_SBIN, _BB_SUID_DROP))
+  IF_REALPATH(APPLET(realpath, _BB_DIR_USR_BIN, _BB_SUID_DROP))
+  IF_REFORMIME(APPLET(reformime, _BB_DIR_BIN, _BB_SUID_DROP))
+diff -Nrc busybox-1.18.3__/include/usage.src.h busybox-1.18.3/include/usage.src.h
+*** busybox-1.18.3__/include/usage.src.h	2011-11-10 22:48:14.274603713 +0800
+--- busybox-1.18.3/include/usage.src.h	2011-11-10 23:04:25.824240000 +0800
+***************
+*** 3091,3096 ****
+--- 3091,3102 ----
+       "\n	-v	Verbose" \
+  	) \
+  
++ #define readmbr_trivial_usage \
++ 	 "DEVICE" "FILE"
++ #define readmbr_full_usage "\n\n" \
++        "read mbr" 
++ 
++ 	
+  #define readprofile_trivial_usage \
+         "[OPTIONS]"
+  #define readprofile_full_usage "\n\n" \
+diff -Nrc busybox-1.18.3__/util-linux/Config.src busybox-1.18.3/util-linux/Config.src
+*** busybox-1.18.3__/util-linux/Config.src	2011-11-10 22:48:14.244603818 +0800
+--- busybox-1.18.3/util-linux/Config.src	2011-11-10 22:57:03.974610000 +0800
+***************
+*** 595,600 ****
+--- 595,607 ----
+  	help
+  	  Print the device node associated with the filesystem mounted at '/'.
+  
++ 	  
++ config READMBR
++ 	bool "readmbr"
++ 	default y
++ 	help
++ 	  read mbr.	  
++ 	  
+  config READPROFILE
+  	bool "readprofile"
+  	default y
+diff -Nrc busybox-1.18.3__/util-linux/Kbuild.src busybox-1.18.3/util-linux/Kbuild.src
+*** busybox-1.18.3__/util-linux/Kbuild.src	2011-11-10 22:48:14.233054118 +0800
+--- busybox-1.18.3/util-linux/Kbuild.src	2011-11-10 22:57:38.864603997 +0800
+***************
+*** 37,42 ****
+--- 37,43 ----
+  lib-$(CONFIG_PIVOT_ROOT)        += pivot_root.o
+  lib-$(CONFIG_RDATE)             += rdate.o
+  lib-$(CONFIG_RDEV)              += rdev.o
++ lib-$(CONFIG_READMBR)              += readmbr.o
+  lib-$(CONFIG_READPROFILE)       += readprofile.o
+  lib-$(CONFIG_RTCWAKE)           += rtcwake.o
+  lib-$(CONFIG_SCRIPT)            += script.o
+diff -Nrc busybox-1.18.3__/util-linux/readmbr.c busybox-1.18.3/util-linux/readmbr.c
+*** busybox-1.18.3__/util-linux/readmbr.c	1970-01-01 08:00:00.000000000 +0800
+--- busybox-1.18.3/util-linux/readmbr.c	2011-11-10 23:37:06.584605841 +0800
+***************
+*** 0 ****
+--- 1,118 ----
++ #include <stdio.h>
++ #include <sys/types.h>
++ #include <sys/stat.h>
++ #include <fcntl.h>
++ #include <unistd.h>
++ #include <errno.h>
++ #include <string.h>
++ #include "busybox.h"
++ #include "libbb.h"
++ #define     MBR_SIZE			1024
++ #define   	MBR_MAGIC			"softw311"
++ #define     MBR_START_ADDRESS	0x00000000
++ #define     MBR_MAX_PART_COUNT	15
++ #define     MBR_COPY_NUM        4	/* backup number of mbr */
++ #define     MBR_RESERVED        (MBR_SIZE - 20 - (MBR_MAX_PART_COUNT * sizeof(PARTITION)))	/* reserved space */
++ 
++ /* partions information, 64byte */
++ typedef struct tag_PARTITION
++ {
++ 	unsigned  int       addrhi;				// start address, unit in sectors(512 bytes)
++ 	unsigned  int       addrlo;				//
++ 	unsigned  int       lenhi;				// length
++ 	unsigned  int       lenlo;				//
++ 	unsigned  char      classname[12];		// sub devices name
++ 	unsigned  char      name[12];			// main devices name
++ 	unsigned  int       user_type;          // user type
++ 	unsigned  int       ro;                 // write and read
++ 	unsigned  char      res[16];			// reseved
++ } __attribute__ ((packed))PARTITION;
++ 
++ /* mbr information */
++ typedef struct tag_MBR
++ {
++ 	unsigned  int       crc32;				        // crc 1k - 4
++ 	unsigned  int       version;			        // version informatio, 0x00000100
++ 	unsigned  char 	    magic[8];			        // "softw311"
++ 	unsigned  char 	    copy;				        // mbr copys
++ 	unsigned  char 	    index;				        // index of backups
++ 	unsigned  short     PartCount;			        // number of partions
++ 	PARTITION           array[MBR_MAX_PART_COUNT];	// partions
++ 	unsigned  char      res[MBR_RESERVED];
++ }__attribute__ ((packed)) MBR;
++ 
++ 
++ #define MBR_OFFSET_IN_MMC	20			/* the offset of our mbr in mmc card, in MByte */
++ 
++ char mbr_buf[1024];
++ 
++ int readmbr_main(int argc, char * argv[])
++ {
++ 	int fin, fout;
++ 	MBR *mbr;
++ 	int i;
++ 	char out_buf[128];
++ 	unsigned long long offset, size;
++ 
++ 	if(argc != 3) {
++ 		printf("Usage: %s mbrname filename\n", argv[0]);
++ 		return 0;
++ 	}
++ 
++ 	fin = open(argv[1], O_RDONLY);
++ 	fout = open(argv[2], O_RDWR | O_CREAT | O_TRUNC, S_IRWXU | S_IRGRP | S_IROTH);
++ 
++ 	if(fin < 0) {
++ 		perror("open error");
++ 		return -1;
++ 	}
++ 
++ 	if(fout < 0) {
++ 		perror("can not create file");
++ 		return -1;
++ 	}
++ 
++ 	if( lseek(fin, MBR_OFFSET_IN_MMC * 1024 * 1024, SEEK_SET) < 0 ) {
++ 		printf("seek failed");
++ 		return -1;
++ 	}
++ 
++ 	if( read(fin, mbr_buf, 1024) < 0 ) {
++ 		printf("read failed");
++ 		return -1;
++ 	}
++ 
++ 	mbr = (MBR *)mbr_buf;
++ 
++ 	if(strncmp((const char*)mbr->magic, MBR_MAGIC, 8)) {
++ 		printf("magic number not match, not a mbr?\n");
++ 		return -1;
++ 	}
++ 		
++ 
++ 	for(i = 0; i < mbr->PartCount && i < MBR_MAX_PART_COUNT; i++) {
++ 		offset = mbr->array[i].addrhi;
++ 		offset = (offset << 32) | (mbr->array[i].addrlo);
++ 		offset =  ( offset / 2 / 1024 ) * ( 1024 * 1024 )  ; /* in Byte */
++ 		
++ 
++ 		
++ 		size = mbr->array[i].lenhi;
++ 		size = (size << 32) | (mbr->array[i].lenlo);
++ 		size = size * 1024; /* in Byte */
++ 
++ 		if(!offset || !size)
++ 			continue;
++ 
++ 		sprintf(out_buf, "%s %s %llu %llu\n",
++ 			mbr->array[i].name, mbr->array[i].classname, offset + MBR_OFFSET_IN_MMC * 1024 *1024, size);
++ 
++ 		printf("%s", out_buf);
++ 
++ 		write(fout, out_buf, strlen(out_buf));
++ 
++ 	}
++ 
++ 	close(fin);
++ 	close(fout);
++ }

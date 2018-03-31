@@ -1,0 +1,5 @@
+config BR2_PACKAGE_SZ_RZ
+	bool "sz_rz"
+	help
+		rzsz-3.48 is a tool which can transport
+		file with console

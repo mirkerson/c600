@@ -1,0 +1,24 @@
+--- arch/arm/boot/dts/sunivw1p1.dtsi
++++ arch/arm/boot/dts/sunivw1p1.dtsi
+@@ -55,6 +55,12 @@
+ 		};
+ 	};
+ 
++        sram_ctrl {
++                device_type = "sram_ctrl";
++                compatible = "allwinner,sram_ctrl";
++                reg = <0x0 0x01c00000 0x0 0x100>; /*sram base*/
++        };
++
+ 	ion {
+ 		compatible = "allwinner,sunxi-ion";
+ 		/*types is list here:
+@@ -99,7 +105,7 @@
+ 		#address-cells = <0>;
+ 		device_type = "intc";
+ 		interrupt-controller;
+-		reg = <0x0 0x01c20400 0 0x1000>;
++		reg = <0x0 0x01c20400 0 0x400>;
+ 	};
+ 
+ 	wdt: watchdog@01c20ca0 {

@@ -1,0 +1,64 @@
+#
+# softwinner SUNXI USB2.0 Controller Driver.
+#
+
+#---------------------------------------------
+#-
+#- config USB2.0 Controller.
+#-
+#---------------------------------------------
+menuconfig USB_SUNXI
+    boolean "SUNXI USB support"
+    depends on ARCH_SUNXI
+		
+if USB_SUNXI
+menuconfig USB_SUNXI_USB
+    tristate "SUNXI USB2.0 Dual Role Controller support"
+    help
+        SUNXI USB2.0 Dual Role Controller
+
+if USB_SUNXI_USB
+config USB_SUNXI_USBC
+    tristate "SUNXI USB2.0 core"
+    help
+        usb controller core driver.
+        
+config USB_SUNXI_USB_MANAGER
+    tristate "SUNXI USB2.0 Manager"
+    depends on USB_SUNXI_USBC
+    default n
+    help
+        manager all usb controller.
+        
+config USB_SUNXI_HCD0
+    tristate "SUNXI otg host"
+    depends on USB_SUNXI_USBC
+    default y
+    help
+        usb otg host controller driver.
+        
+config USB_SUNXI_USB0_OTG
+    boolean "otg support"
+    depends on USB_SUNXI_HCD0
+    default y
+    help
+        usb0 can only use for device and host.        
+
+
+config USB_SUNXI_USB_DEBUG
+    tristate "SUNXI USB driver debug message"
+    depends on USB_SUNXI_USBC
+    default n
+    help
+        SUNXI USB driver debug message.
+
+config USB_SUNXI_USB_ADB
+    tristate "SUNXI USB driver use adb source"
+    depends on USB_SUNXI_USBC
+    default n
+    help
+        SUNXI USB driver debug message.
+endif # USB_SUNXI_USB      	
+endif # USB_SUNXI
+
+

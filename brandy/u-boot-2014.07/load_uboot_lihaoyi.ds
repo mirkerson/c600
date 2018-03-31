@@ -1,0 +1,5 @@
+set var $Core::$CPSR.T = 0
+restore "H:\Users\A-GAN\Desktop\u-boot-sun63i.bin" binary 0x80100000
+
+set var $Core::$PC = 0x80100000
+add-symbol-file "H:\Users\A-GAN\Desktop\u-boot"

@@ -1,0 +1,13 @@
+format     = 0x35
+width      = 0x320
+heigth     = 0x1e0
+memlen     = 0x177000
+ch0addr    = 0x0
+ch1addr    = 0x0
+ch2addr    = 0x0
+ch0linstr  = 0xc80
+ch1linstr  = 0x0
+ch2linstr  = 0x0
+ch0mboff   = 0x0
+ch1mboff   = 0x0
+ch2mboff   = 0x0

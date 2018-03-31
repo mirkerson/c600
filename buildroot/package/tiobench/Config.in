@@ -1,0 +1,4 @@
+config BR2_PACKAGE_TIOBENCH
+	bool "tiobench"
+	help
+	  An I/O test bench tool.

@@ -1,0 +1,1421 @@
+diff -uN DirectFB-1.4.11_org/gfxdrivers/vmware/g2d_driver.h DirectFB-1.4.11/gfxdrivers/vmware/g2d_driver.h
+--- DirectFB-1.4.11_org/gfxdrivers/vmware/g2d_driver.h	1970-01-01 08:00:00.000000000 +0800
++++ DirectFB-1.4.11/gfxdrivers/vmware/g2d_driver.h	2012-10-10 14:22:21.338187255 +0800
+@@ -0,0 +1,249 @@
++/* g2d_driver.h
++ *
++ * Copyright (c)	2011 xxxx Electronics
++ *					2011 Yupu Tang
++ *
++ * @ F23 G2D driver
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA02111-1307USA
++ */
++
++#ifndef __G2D_DRIVER_H
++#define __G2D_DRIVER_H
++#include <linux/types.h>
++
++#ifndef __G2D_BSP_DRV_H
++#define __G2D_BSP_DRV_H
++
++/* mixer data format */
++typedef enum {
++	/* share data format */
++	G2D_FMT_ARGB_AYUV8888	= (0x0),
++	G2D_FMT_BGRA_VUYA8888	= (0x1),
++	G2D_FMT_ABGR_AVUY8888	= (0x2),
++	G2D_FMT_RGBA_YUVA8888	= (0x3),
++	
++	G2D_FMT_XRGB8888		= (0x4),
++	G2D_FMT_BGRX8888		= (0x5),
++	G2D_FMT_XBGR8888		= (0x6),
++	G2D_FMT_RGBX8888		= (0x7),
++	
++	G2D_FMT_ARGB4444		= (0x8),
++	G2D_FMT_ABGR4444		= (0x9),
++	G2D_FMT_RGBA4444		= (0xA),
++	G2D_FMT_BGRA4444		= (0xB),
++
++	G2D_FMT_ARGB1555		= (0xC),
++	G2D_FMT_ABGR1555		= (0xD),
++	G2D_FMT_RGBA5551		= (0xE),
++	G2D_FMT_BGRA5551		= (0xF),
++
++	G2D_FMT_RGB565			= (0x10),
++	G2D_FMT_BGR565			= (0x11),
++
++	G2D_FMT_IYUV422			= (0x12),
++
++	G2D_FMT_8BPP_MONO		= (0x13),
++	G2D_FMT_4BPP_MONO		= (0x14),
++	G2D_FMT_2BPP_MONO		= (0x15),
++	G2D_FMT_1BPP_MONO		= (0x16),
++
++	G2D_FMT_PYUV422UVC		= (0x17),
++	G2D_FMT_PYUV420UVC		= (0x18),
++	G2D_FMT_PYUV411UVC		= (0x19),
++	
++	/* just for output format */
++	G2D_FMT_PYUV422			= (0x1A),
++	G2D_FMT_PYUV420			= (0x1B),
++	G2D_FMT_PYUV411			= (0x1C),
++	
++	/* just for input format */	
++	G2D_FMT_8BPP_PALETTE	= (0x1D),
++	G2D_FMT_4BPP_PALETTE	= (0x1E),
++	G2D_FMT_2BPP_PALETTE	= (0x1F),
++	G2D_FMT_1BPP_PALETTE	= (0x20),
++
++	G2D_FMT_PYUV422UVC_MB16	= (0x21),
++	G2D_FMT_PYUV420UVC_MB16	= (0x22),
++	G2D_FMT_PYUV411UVC_MB16	= (0x23),
++	G2D_FMT_PYUV422UVC_MB32	= (0x24),
++	G2D_FMT_PYUV420UVC_MB32	= (0x25),
++	G2D_FMT_PYUV411UVC_MB32	= (0x26),
++	G2D_FMT_PYUV422UVC_MB64	= (0x27),
++	G2D_FMT_PYUV420UVC_MB64	= (0x28),
++	G2D_FMT_PYUV411UVC_MB64	= (0x29),
++	G2D_FMT_PYUV422UVC_MB128= (0x2A),
++	G2D_FMT_PYUV420UVC_MB128= (0x2B),
++	G2D_FMT_PYUV411UVC_MB128= (0x2C),
++
++}g2d_data_fmt;	
++
++/* pixel sequence in double word */
++typedef enum {
++	G2D_SEQ_NORMAL = 0x0,
++	
++	/* for interleaved yuv422 */
++    G2D_SEQ_VYUY   = 0x1,				/* pixel 0在低16位 */
++    G2D_SEQ_YVYU   = 0x2,				/* pixel 1在低16位 */
++    
++	/* for uv_combined yuv420 */
++    G2D_SEQ_VUVU   = 0x3,  
++    
++	/* for 16bpp rgb */
++    G2D_SEQ_P10    = 0x4,				/* pixel 0在低16位 */
++    G2D_SEQ_P01    = 0x5,				/* pixel 1在低16位 */
++    
++	/* planar format or 8bpp rgb */
++    G2D_SEQ_P3210  = 0x6,				/* pixel 0在低8位 */
++    G2D_SEQ_P0123  = 0x7,				/* pixel 3在低8位 */
++    
++	/* for 4bpp rgb */
++    G2D_SEQ_P76543210  = 0x8,			/* 7,6,5,4,3,2,1,0 */
++    G2D_SEQ_P67452301  = 0x9,			/* 6,7,4,5,2,3,0,1 */
++    G2D_SEQ_P10325476  = 0xA,			/* 1,0,3,2,5,4,7,6 */
++    G2D_SEQ_P01234567  = 0xB,			/* 0,1,2,3,4,5,6,7 */
++    
++	/* for 2bpp rgb */
++    G2D_SEQ_2BPP_BIG_BIG       = 0xC,	/* 15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0 */
++    G2D_SEQ_2BPP_BIG_LITTER    = 0xD,	/* 12,13,14,15,8,9,10,11,4,5,6,7,0,1,2,3 */
++    G2D_SEQ_2BPP_LITTER_BIG    = 0xE,	/* 3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12 */
++    G2D_SEQ_2BPP_LITTER_LITTER = 0xF,	/* 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 */
++    
++	/* for 1bpp rgb */
++    G2D_SEQ_1BPP_BIG_BIG       = 0x10,	/* 31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0 */
++    G2D_SEQ_1BPP_BIG_LITTER    = 0x11,	/* 24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23,8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7 */
++    G2D_SEQ_1BPP_LITTER_BIG    = 0x12,	/* 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8,23,22,21,20,19,18,17,16,31,30,29,28,27,26,25,24 */
++    G2D_SEQ_1BPP_LITTER_LITTER = 0x13,	/* 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31 */
++}g2d_pixel_seq;
++
++
++typedef enum {  
++	G2D_FIL_NONE			= 0x00000000,
++	G2D_FIL_PIXEL_ALPHA		= 0x00000001,
++	G2D_FIL_PLANE_ALPHA		= 0x00000002,
++	G2D_FIL_MULTI_ALPHA		= 0x00000004,
++}g2d_fillrect_flags;
++
++typedef enum {
++	G2D_BLT_NONE			= 0x00000000,
++	G2D_BLT_PIXEL_ALPHA		= 0x00000001,
++	G2D_BLT_PLANE_ALPHA		= 0x00000002,
++	G2D_BLT_MULTI_ALPHA		= 0x00000004,	
++	G2D_BLT_SRC_COLORKEY	= 0x00000008,
++	G2D_BLT_DST_COLORKEY	= 0x00000010,
++	G2D_BLT_FLIP_HORIZONTAL	= 0x00000020,
++	G2D_BLT_FLIP_VERTICAL	= 0x00000040,
++	G2D_BLT_ROTATE90		= 0x00000080,
++	G2D_BLT_ROTATE180		= 0x00000100,	
++	G2D_BLT_ROTATE270		= 0x00000200,
++	G2D_BLT_MIRROR45		= 0x00000400,
++	G2D_BLT_MIRROR135		= 0x00000800,
++	G2D_BLT_SRC_PREMULTIPLY	= 0x00001000,
++	G2D_BLT_DST_PREMULTIPLY	= 0x00002000,
++}g2d_blt_flags;
++
++/* flip rectangle struct */
++typedef struct {
++	__s32		x;			/* left top point coordinate x */
++	__s32		y;			/* left top point coordinate y */
++	__u32		w;			/* rectangle width */
++	__u32		h;			/* rectangle height */
++}g2d_rect;
++
++/* image struct */
++typedef struct {
++	__u32			 addr[3];		/* base addr of image frame buffer in byte */
++	__u32			 w;			/* width of image frame buffer in pixel */
++	__u32			 h;			/* height of image frame buffer in pixel */
++	g2d_data_fmt	 format;	/* pixel format of image frame buffer */
++	g2d_pixel_seq	 pixel_seq;	/* pixel sequence of image frame buffer */
++}g2d_image;
++	
++typedef struct {
++	g2d_fillrect_flags	 flag;
++	g2d_image			 dst_image;
++	g2d_rect			 dst_rect;
++		
++	__u32				 color;		/* fill color */
++	__u32				 alpha;		/* plane alpha value */
++		
++}g2d_fillrect;
++
++typedef struct {
++	g2d_blt_flags		 flag;
++	g2d_image			 src_image;                        
++	g2d_rect			 src_rect;
++	
++	g2d_image			 dst_image;	
++	__s32				 dst_x;		/* left top point coordinate x of dst rect */
++	__s32				 dst_y;		/* left top point coordinate y of dst rect */
++	
++	__u32				 color;		/* colorkey color */	
++	__u32				 alpha;		/* plane alpha value */
++
++}g2d_blt;
++
++typedef struct {
++	g2d_blt_flags		 flag;
++	g2d_image			 src_image;
++	g2d_rect			 src_rect;
++	
++	g2d_image			 dst_image;
++	g2d_rect			 dst_rect;
++	
++	__u32				 color;		/* colorkey color */	
++	__u32				 alpha;		/* plane alpha value */
++	
++}g2d_stretchblt;
++
++typedef struct {
++	__u32		 flag;		/* 光栅操作码 */
++	g2d_image	 dst_image;
++	g2d_rect	 dst_rect;
++		
++	g2d_image	 src_image;
++	__u32		 src_x;
++	__u32		 src_y;
++	
++	g2d_image	 mask_image;
++	__u32		 mask_x;
++	__u32		 mask_y;
++	
++}g2d_maskblt;
++
++typedef struct {
++	__u32		*pbuffer;
++	__u32		 size;
++	
++}g2d_palette;
++
++#endif /*__G2D_BSP_DRV_H*/
++
++typedef enum
++{
++	G2D_CMD_BITBLT			=	0x50,
++	G2D_CMD_FILLRECT		=	0x51,
++	G2D_CMD_STRETCHBLT		=	0x52,
++	G2D_CMD_PALETTE_TBL		=	0x53,
++	G2D_CMD_QUEUE			=	0x54,
++	
++	G2D_CMD_MEM_REQUEST		=	0x59,
++	G2D_CMD_MEM_RELEASE		=	0x5A,
++	G2D_CMD_MEM_GETADR		=	0x5B,
++	G2D_CMD_MEM_SELIDX		=	0x5C,
++}g2d_cmd;
++
++#endif	/* __G2D_DRIVER_H */
++
+diff -uN DirectFB-1.4.11_org/gfxdrivers/vmware/Makefile.am DirectFB-1.4.11/gfxdrivers/vmware/Makefile.am
+--- DirectFB-1.4.11_org/gfxdrivers/vmware/Makefile.am	2010-10-31 16:49:49.000000000 +0800
++++ DirectFB-1.4.11/gfxdrivers/vmware/Makefile.am	2011-06-10 19:12:16.000000000 +0800
+@@ -19,6 +19,7 @@
+ libdirectfb_vmware_la_SOURCES =	\
+ 	vmware_2d.c		\
+ 	vmware_2d.h		\
++	vmware_surface_pool.c \	
+ 	vmware_gfxdriver.c	\
+ 	vmware_gfxdriver.h
+ 
+diff -uN DirectFB-1.4.11_org/gfxdrivers/vmware/Makefile.in DirectFB-1.4.11/gfxdrivers/vmware/Makefile.in
+--- DirectFB-1.4.11_org/gfxdrivers/vmware/Makefile.in	2010-11-16 05:35:40.000000000 +0800
++++ DirectFB-1.4.11/gfxdrivers/vmware/Makefile.in	2012-09-28 16:26:56.374308000 +0800
+@@ -76,7 +76,7 @@
+ libdirectfb_vmware_la_DEPENDENCIES =  \
+ 	$(top_builddir)/lib/direct/libdirect.la \
+ 	$(top_builddir)/src/libdirectfb.la
+-am_libdirectfb_vmware_la_OBJECTS = vmware_2d.lo vmware_gfxdriver.lo
++am_libdirectfb_vmware_la_OBJECTS = vmware_2d.lo vmware_gfxdriver.lo vmware_surface_pool.lo
+ libdirectfb_vmware_la_OBJECTS = $(am_libdirectfb_vmware_la_OBJECTS)
+ libdirectfb_vmware_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
+ 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
+@@ -311,6 +311,7 @@
+ libdirectfb_vmware_la_SOURCES = \
+ 	vmware_2d.c		\
+ 	vmware_2d.h		\
++	vmware_surface_pool.c \
+ 	vmware_gfxdriver.c	\
+ 	vmware_gfxdriver.h
+ 
+diff -uN DirectFB-1.4.11_org/gfxdrivers/vmware/vmware_2d.c DirectFB-1.4.11/gfxdrivers/vmware/vmware_2d.c
+--- DirectFB-1.4.11_org/gfxdrivers/vmware/vmware_2d.c	2010-11-16 05:13:05.000000000 +0800
++++ DirectFB-1.4.11/gfxdrivers/vmware/vmware_2d.c	2012-09-28 16:48:59.448245000 +0800
+@@ -16,28 +16,38 @@
+ 
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the
+-   Free Software Foundation, Inc., 59 Temple Place - Suite 330,
++   Free Software Foundation, Inc., 59 Temple Place - Suite 330, 
+    Boston, MA 02111-1307, USA.
+ */
+ 
+ //#define DIRECT_ENABLE_DEBUG
+ 
+ #include <config.h>
+-
++#include <stdio.h>
++#include <unistd.h>
++#include <stdlib.h>
++#include <errno.h>
++#include <string.h>
++#include <sys/mman.h>
++#include <fcntl.h>
++#include <fbdev/fb.h>
++#include <asm/types.h>
+ #include <directfb.h>
+-
+ #include <direct/debug.h>
+ #include <direct/memcpy.h>
+ #include <direct/messages.h>
+-
+ #include <core/state.h>
+ #include <core/surface.h>
+-
+ #include <gfx/convert.h>
++#include <sys/ioctl.h>
+ 
+ #include "vmware_2d.h"
+ #include "vmware_gfxdriver.h"
++#include "g2d_driver.h"
+ 
++extern int hmp;
++unsigned int mpmem[100];
++unsigned int fbdata[3];
+ 
+ D_DEBUG_DOMAIN( VMWare_2D, "VMWare/2D", "VMWare 2D Acceleration" );
+ 
+@@ -67,8 +77,9 @@
+                                                 vmware_validate_##flag( vdev, state );  \
+                                       } while (0)
+ 
+-
+ /**************************************************************************************************/
++static unsigned int vmware_get_paddr(unsigned int vaddr);
++static unsigned int wmware_get_color_format(unsigned int dfb_format);										   
+ 
+ /*
+  * Called by vmwareSetState() to ensure that the destination registers are properly set
+@@ -80,9 +91,12 @@
+ {
+      /* Remember destination parameters for usage in rendering functions. */
+      vdev->dst_addr   = state->dst.addr;
++	 vdev->dst_paddr  = state->dst.phys;
+      vdev->dst_pitch  = state->dst.pitch;
+      vdev->dst_format = state->dst.buffer->format;
+      vdev->dst_bpp    = DFB_BYTES_PER_PIXEL( vdev->dst_format );
++	 vdev->dst_width  = state->dst.pitch/4;//state->destination->config.size.w;
++	 vdev->dst_height = state->destination->config.size.h;
+ 
+      /* Set the flag. */
+      VMWARE_VALIDATE( DESTINATION );
+@@ -116,10 +130,40 @@
+                                                 state->color.b );
+                break;
+ 
++		   case DSPF_ARGB4444:
++				vdev->color_pixel = PIXEL_ARGB4444( state->color.a,
++													state->color.r,
++													state->color.g,
++													state->color.b );
++				break;
++		   
++		   case DSPF_RGBA4444:
++				vdev->color_pixel = PIXEL_RGBA4444( state->color.a,
++												 	state->color.r,
++												 	state->color.g,
++												 	state->color.b );
++				break;
++		   
++		   case DSPF_ARGB1555:
++				vdev->color_pixel = PIXEL_ARGB1555( state->color.a,
++					                             	state->color.r,
++												 	state->color.g,
++												 	state->color.b ); 
++				break;
++				
++		   case DSPF_RGBA5551:
++				vdev->color_pixel = PIXEL_RGBA5551( state->color.a,
++												  	state->color.r,
++												  	state->color.g,
++												  	state->color.b ); 
++				 break;
++				 
+           default:
+                D_BUG( "unexpected format %s", dfb_pixelformat_name(vdev->dst_format) );
+      }
+ 
++	 vdev->alpha = state->color.a;
++	 
+      /* Set the flag. */
+      VMWARE_VALIDATE( COLOR );
+ }
+@@ -133,10 +177,14 @@
+                         CardState        *state )
+ {
+      /* Remember source parameters for usage in rendering functions. */
+-     vdev->src_addr   = state->src.addr;
+-     vdev->src_pitch  = state->src.pitch;
+-     vdev->src_format = state->src.buffer->format;
+-     vdev->src_bpp    = DFB_BYTES_PER_PIXEL( vdev->src_format );
++     vdev->src_addr     = state->src.addr;
++	 vdev->src_paddr  	= state->src.phys;
++     vdev->src_pitch    = state->src.pitch;
++     vdev->src_format   = state->src.buffer->format;
++     vdev->src_bpp      = DFB_BYTES_PER_PIXEL( vdev->src_format );
++     vdev->src_colorkey = state->src_colorkey;
++	 vdev->src_width    = state->src.pitch/4;//state->source->config.size.w;
++	 vdev->src_height   = state->source->config.size.h;
+ 
+      /* Set the flag. */
+      VMWARE_VALIDATE( SOURCE );
+@@ -155,6 +203,7 @@
+ DFBResult
+ vmwareEngineSync( void *drv, void *dev )
+ {
++
+      return DFB_OK;
+ }
+ 
+@@ -164,6 +213,7 @@
+ void
+ vmwareEngineReset( void *drv, void *dev )
+ {
++
+ }
+ 
+ /*
+@@ -177,6 +227,7 @@
+ void
+ vmwareEmitCommands( void *drv, void *dev )
+ {
++
+ }
+ 
+ /*
+@@ -188,47 +239,67 @@
+                   CardState           *state,
+                   DFBAccelerationMask  accel )
+ {
++     VMWareDeviceData       *vdev     = (VMWareDeviceData*) dev;
++
+      D_DEBUG_AT( VMWare_2D, "vmwareCheckState (state %p, accel 0x%08x) <- dest %p\n",
+                  state, accel, state->destination );
+ 
+      /* Return if the desired function is not supported at all. */
+-     if (accel & ~(VMWARE_SUPPORTED_DRAWINGFUNCTIONS | VMWARE_SUPPORTED_BLITTINGFUNCTIONS))
++     if (accel & ~(VMWARE_SUPPORTED_DRAWINGFUNCTIONS | VMWARE_SUPPORTED_BLITTINGFUNCTIONS)){
+           return;
++        }
+ 
+      /* Return if the destination format is not supported. */
+      switch (state->destination->config.format) {
+           case DSPF_ARGB:
+           case DSPF_RGB32:
+           case DSPF_RGB16:
+-               break;
+-
+-          default:
+-               return;
++          case DSPF_ARGB4444:
++          case DSPF_RGBA4444:
++          case DSPF_ARGB1555:
++          case DSPF_RGBA5551:
++          		break;
++
++          default:{
++          		state->destination->config.format =DSPF_ARGB;
++                break;
++           }
+      }
+ 
+      /* Check if drawing or blitting is requested. */
+      if (DFB_DRAWING_FUNCTION( accel )) {
+           /* Return if unsupported drawing flags are set. */
+-          if (state->drawingflags & ~VMWARE_SUPPORTED_DRAWINGFLAGS)
++          if (state->drawingflags & ~VMWARE_SUPPORTED_DRAWINGFLAGS){
++
+                return;
++            }
++            vdev->drawingflags = state->drawingflags;
+      }
+      else {
+           /* Return if the source format is not supported. */
+           switch (state->source->config.format) {
+-               case DSPF_ARGB:
+-               case DSPF_RGB32:
+-               case DSPF_RGB16:
+-                    /* FIXME: Currently only copying blits supported. */
+-                    if (state->source->config.format == state->destination->config.format)
+-                         break;
++	          case DSPF_ARGB:
++	          case DSPF_RGB32:
++	          case DSPF_RGB16:
++	          case DSPF_ARGB4444:
++	          case DSPF_RGBA4444:
++	          case DSPF_ARGB1555:
++	          case DSPF_RGBA5551:
++
++			    /* FIXME: Currently only copying blits supported. */
++//			    if (state->source->config.format == state->destination->config.format)
++			         break;
+ 
+-               default:
+-                    return;
++              default:{
++						return;
++               }
+           }
+ 
+           /* Return if unsupported blitting flags are set. */
+-          if (state->blittingflags & ~VMWARE_SUPPORTED_BLITTINGFLAGS)
++          if (state->blittingflags & ~VMWARE_SUPPORTED_BLITTINGFLAGS){
+                return;
++            }
++            vdev->blittingflags = state->blittingflags;            
+      }
+ 
+      /* Enable acceleration of the function. */
+@@ -297,6 +368,7 @@
+ 
+           case DFXL_BLIT:
+                /* ...require valid source. */
++			   VMWARE_CHECK_VALIDATE( COLOR );
+                VMWARE_CHECK_VALIDATE( SOURCE );
+ 
+                /*
+@@ -307,6 +379,20 @@
+                state->set = VMWARE_SUPPORTED_BLITTINGFUNCTIONS;
+                break;
+ 
++          case DFXL_STRETCHBLIT:
++               /* ...require valid source. */
++			   VMWARE_CHECK_VALIDATE( COLOR );
++               VMWARE_CHECK_VALIDATE( SOURCE );
++
++               /*
++                * 3) Tell which functions can be called without further validation, i.e. SetState()
++                *
++                * When the hw independent state is changed, this collection is reset.
++                */
++               state->set = VMWARE_SUPPORTED_BLITTINGFUNCTIONS;
++              
++               break;
++               
+           default:
+                D_BUG( "unexpected drawing/blitting function" );
+                break;
+@@ -320,6 +406,7 @@
+       * for subsequent rendering functions, unless they aren't defined by 3).
+       */
+      state->mod_hw = 0;
++
+ }
+ 
+ /*
+@@ -328,75 +415,263 @@
+ bool
+ vmwareFillRectangle( void *drv, void *dev, DFBRectangle *rect )
+ {
+-     VMWareDeviceData *vdev = (VMWareDeviceData*) dev;
+-     void             *addr = vdev->dst_addr + rect->y * vdev->dst_pitch +
+-                              DFB_BYTES_PER_LINE(vdev->dst_format, rect->x);
+-
+-     D_DEBUG_AT( VMWare_2D, "%s( %d,%d-%dx%d )\n", __FUNCTION__, DFB_RECTANGLE_VALS( rect ) );
+-
+-     switch (vdev->dst_bpp) {
+-          case 4:
+-               while (rect->h--) {
+-                    int  w   = rect->w;
+-                    u32 *dst = addr;
+-
+-                    while (w--)
+-                         *dst++ = vdev->color_pixel;
+-
+-                    addr += vdev->dst_pitch;
+-               }
+-               break;
+-
+-          case 2:
+-               while (rect->h--) {
+-                    int  w   = rect->w;
+-                    u16 *dst = addr;
+-
+-                    while (w--)
+-                         *dst++ = vdev->color_pixel;
+-
+-                    addr += vdev->dst_pitch;
+-               }
+-               break;
+-
+-          case 1:
+-               while (rect->h--) {
+-                    int  w   = rect->w;
+-                    u8  *dst = addr;
+-
+-                    while (w--)
+-                         *dst++ = vdev->color_pixel;
+-
+-                    addr += vdev->dst_pitch;
+-               }
+-               break;
+-     }
+ 
++     VMWareDeviceData *vdev     = (VMWareDeviceData*) dev;
++     unsigned int dst_phy_addr  = 0;
++     unsigned int dst_color_f   = 0; 	 
++	 g2d_fillrect fill_para;
++
++	 if(hmp == NULL)
++	 {
++	 	 printf("[vmware][%d][%s][%s]\n", __LINE__, __FILE__,__FUNCTION__);
++		 return false;
++	 }
++
++	 dst_phy_addr =(unsigned int)vdev->dst_paddr;
++	 if((dst_phy_addr == 0))
++	 {
++	 	  printf("[vmware][%d][%s][%s]\n", __LINE__, __FILE__,__FUNCTION__);
++		  return false;
++	 }
++	 dst_color_f = wmware_get_color_format((unsigned int)vdev->dst_format );
++
++	 if (vdev->drawingflags & DSDRAW_BLEND		){fill_para.flag = G2D_FIL_PLANE_ALPHA;}	
++	 else if (vdev->drawingflags & DSDRAW_NOFX	){fill_para.flag = G2D_FIL_NONE;}
++	 fill_para.dst_image.addr[0]   = dst_phy_addr;
++	 fill_para.dst_image.w         = vdev->dst_width;      //set dst width
++	 fill_para.dst_image.h         = vdev->dst_height;     //set dst height
++	 fill_para.dst_image.format    = dst_color_f;          //G2D_FMT_RGB565;//(unsigned int)vdev->dst_format;
++	 fill_para.dst_image.pixel_seq = 0;                    //no support color seq,so use 0
++	 fill_para.dst_rect.x          = rect->x;
++	 fill_para.dst_rect.y          = rect->y;
++	 fill_para.dst_rect.w          = rect->w;
++	 fill_para.dst_rect.h          = rect->h;
++	 fill_para.color               = vdev->color_pixel;    //set the color
++     fill_para.alpha               = vdev->alpha;          //set alpha
++
++	 if(ioctl( hmp , G2D_CMD_FILLRECT ,(unsigned long)(&fill_para)) < 0)
++	 {
++	 	printf("[vmware][%d][%s][%s]G2D_CMD_FILLRECT failure!\n",__LINE__, __FILE__,__FUNCTION__);
++	 	return false;
++	 }
++	 
+      return true;
+ }
+ 
+ /*
+- * Blit a surface using the current hardware state.
++ * Render a filled rectangle using the current hardware state.
+  */
+ bool
+ vmwareBlit( void *drv, void *dev, DFBRectangle *srect, int dx, int dy )
+-{
+-     VMWareDeviceData *vdev = (VMWareDeviceData*) dev;
+-     void             *dst  = vdev->dst_addr + dy * vdev->dst_pitch +
+-                              DFB_BYTES_PER_LINE(vdev->dst_format, dx);
+-     void             *src  = vdev->src_addr + srect->y * vdev->src_pitch +
+-                              DFB_BYTES_PER_LINE(vdev->src_format, srect->x);
++{ 
++    VMWareDeviceData *vdev    = (VMWareDeviceData*) dev;                     
++    u32 src_colorkey          =  vdev->src_colorkey;         
++    unsigned int dst_phy_addr = 0;
++    unsigned int src_phy_addr = 0;
++	unsigned int src_color_f  = 0;
++	unsigned int dst_color_f  = 0;
++	g2d_blt		 blit_para;
++
++    if(hmp == NULL)
++    {
++        return false;
++    }
++    //check dst phy addr
++    dst_phy_addr = (unsigned int)vdev->dst_paddr;
++    src_phy_addr = (unsigned int)vdev->src_paddr;
++
++    if((dst_phy_addr == 0)||(src_phy_addr == 0))
++    {
++		 return false;
++    }
++
++	dst_color_f = wmware_get_color_format((unsigned int)vdev->dst_format );
++	src_color_f = wmware_get_color_format((unsigned int)vdev->src_format );
++	
++	blit_para.src_image.addr[0]      = src_phy_addr;
++	blit_para.src_image.w            = vdev->src_width;
++	blit_para.src_image.h            = vdev->src_height;
++	blit_para.src_image.format       = src_color_f;             //(unsigned int)vdev->dst_format;
++	blit_para.src_image.pixel_seq    = G2D_SEQ_NORMAL;
++	blit_para.src_rect.x             = srect->x;
++	blit_para.src_rect.y             = srect->y;
++	blit_para.src_rect.w             = srect->w;
++	blit_para.src_rect.h             = srect->h;
++	blit_para.dst_image.addr[0]      = dst_phy_addr;
++	blit_para.dst_image.w            = vdev->dst_width;			
++	blit_para.dst_image.h            = vdev->dst_height;
++	blit_para.dst_image.format       = dst_color_f;             //(unsigned int)vdev->dst_format;
++	blit_para.dst_image.pixel_seq    = G2D_SEQ_NORMAL;
++	blit_para.dst_x                  = dx;
++	blit_para.dst_y                  = dy;
++	blit_para.color                  = vdev->src_colorkey;      //set colorkey
++	blit_para.alpha                  = vdev->alpha;
++//   	printf("[vmware][%d][%s][%s][%x]vdev->alpha!\n",__LINE__, __FILE__,__FUNCTION__,vdev->alpha);
++
++    if		(vdev->blittingflags & DSBLIT_BLEND_ALPHACHANNEL){blit_para.flag = G2D_BLT_PIXEL_ALPHA;}
++	else if (vdev->blittingflags & DSBLIT_BLEND_COLORALPHA	){blit_para.flag = G2D_BLT_PLANE_ALPHA;}
++	else if (vdev->blittingflags & DSBLIT_SRC_COLORKEY		){blit_para.flag = G2D_BLT_SRC_COLORKEY;}
++	else if (vdev->blittingflags & DSBLIT_DST_COLORKEY		){blit_para.flag = G2D_BLT_DST_COLORKEY;}
++	else 													 {blit_para.flag = G2D_BLT_NONE;}
++
++    if		(vdev->blittingflags & DSBLIT_ROTATE90			){blit_para.flag |= G2D_BLT_ROTATE90;}
++	else if (vdev->blittingflags & DSBLIT_ROTATE270			){blit_para.flag |= G2D_BLT_ROTATE270;}
++	else if (vdev->blittingflags & DSBLIT_ROTATE180			){blit_para.flag |= G2D_BLT_ROTATE180;}
++	else if (vdev->blittingflags & DSBLIT_FLIP_HORIZONTAL	){blit_para.flag |= G2D_BLT_FLIP_HORIZONTAL;}
++	else if (vdev->blittingflags & DSBLIT_FLIP_VERTICAL		){blit_para.flag |= G2D_BLT_FLIP_VERTICAL;}
++	else													 {blit_para.flag |= G2D_BLT_NONE;}
++
++	if(ioctl(hmp , G2D_CMD_BITBLT ,(unsigned long)(&blit_para)) < 0)
++	{
++		
++   		printf("[vmware][%d][%s][%s]G2D_CMD_BITBLT failure!\n",__LINE__, __FILE__,__FUNCTION__);
++		return false;
++	}
++	
++    return true;
++}
+ 
+-     D_DEBUG_AT( VMWare_2D, "%s( %d,%d-%dx%d -> %d, %d )\n", __FUNCTION__,
+-                 DFB_RECTANGLE_VALS( srect ), dx, dy );
++bool vmwareStretchBlit( void *drv, void *dev,DFBRectangle *srect, DFBRectangle *drect )
++{
++	VMWareDeviceData *vdev    = (VMWareDeviceData*) dev;	
++	unsigned int src_phy_addr = 0;
++	unsigned int dst_phy_addr = 0;
++	unsigned int src_color_f  = 0;
++	unsigned int dst_color_f  = 0;
++	g2d_stretchblt  stretchblit_para;
++	
++    if(hmp == NULL)
++    {
++        return false;
++    }
++
++    dst_phy_addr = (unsigned int)vdev->dst_paddr;
++    src_phy_addr = (unsigned int)vdev->src_paddr;
++
++    if((dst_phy_addr == 0)||(src_phy_addr == 0))
++    {
++		 return false;
++    }
++
++	dst_color_f = wmware_get_color_format((unsigned int)vdev->dst_format );
++	src_color_f = wmware_get_color_format((unsigned int)vdev->src_format );
++	
++    stretchblit_para.src_image.addr[0]       = src_phy_addr;
++    stretchblit_para.src_image.w             = vdev->src_width;
++    stretchblit_para.src_image.h             = vdev->src_height;
++    stretchblit_para.src_image.format        = src_color_f;
++    stretchblit_para.src_image.pixel_seq     = G2D_SEQ_NORMAL;
++   
++    stretchblit_para.src_rect.x              = srect->x;
++    stretchblit_para.src_rect.y              = srect->y;
++    stretchblit_para.src_rect.w              = srect->w;
++    stretchblit_para.src_rect.h              = srect->h;
++
++    stretchblit_para.dst_image.addr[0]       = dst_phy_addr;
++    stretchblit_para.dst_image.w             = vdev->dst_width;
++    stretchblit_para.dst_image.h             = vdev->dst_height;
++    stretchblit_para.dst_image.format        = dst_color_f;
++    stretchblit_para.dst_image.pixel_seq     = G2D_SEQ_NORMAL;
++   
++    stretchblit_para.dst_rect.x              = drect->x;
++    stretchblit_para.dst_rect.y              = drect->y;
++    stretchblit_para.dst_rect.w              = drect->w;
++    stretchblit_para.dst_rect.h              = drect->h;
++    stretchblit_para.color                   = vdev->src_colorkey;//set colorkey
++    stretchblit_para.alpha                   = vdev->alpha;//fix me
++    
++    if		(vdev->blittingflags & DSBLIT_BLEND_ALPHACHANNEL){stretchblit_para.flag = G2D_BLT_PIXEL_ALPHA;}
++	else if (vdev->blittingflags & DSBLIT_BLEND_COLORALPHA	){stretchblit_para.flag = G2D_BLT_PLANE_ALPHA;}
++	else if (vdev->blittingflags & DSBLIT_SRC_COLORKEY		){stretchblit_para.flag = G2D_BLT_SRC_COLORKEY;}
++	else if (vdev->blittingflags & DSBLIT_DST_COLORKEY		){stretchblit_para.flag = G2D_BLT_DST_COLORKEY;}
++	else 													 {stretchblit_para.flag = G2D_BLT_NONE;}
++
++    if		(vdev->blittingflags & DSBLIT_ROTATE90			){stretchblit_para.flag |= G2D_BLT_ROTATE90;}
++	else if (vdev->blittingflags & DSBLIT_ROTATE270			){stretchblit_para.flag |= G2D_BLT_ROTATE270;}
++	else if (vdev->blittingflags & DSBLIT_ROTATE180			){stretchblit_para.flag |= G2D_BLT_ROTATE180;}
++	else if (vdev->blittingflags & DSBLIT_FLIP_HORIZONTAL	){stretchblit_para.flag |= G2D_BLT_FLIP_HORIZONTAL;}
++	else if (vdev->blittingflags & DSBLIT_FLIP_VERTICAL		){stretchblit_para.flag |= G2D_BLT_FLIP_VERTICAL;}
++	else													 {stretchblit_para.flag |= G2D_BLT_NONE;}
++
++    if(ioctl(hmp , G2D_CMD_STRETCHBLT ,(unsigned long)(&stretchblit_para))<0)
++    {
++   		printf("[vmware][%d][%s][%s]G2D_CMD_STRETCHBLT failure!\n",__LINE__, __FILE__,__FUNCTION__);
++   		return false;
++    }
++   
++    return true;
++   
++}
+ 
+-     while (srect->h--) {
+-          direct_memcpy( dst, src, srect->w * vdev->dst_bpp );
++static unsigned int wmware_get_color_format(unsigned int dfb_format)
++{
++	int cf = 0;
+ 
+-          dst += vdev->dst_pitch;
+-          src += vdev->src_pitch;
+-     }
++	switch(dfb_format)
++	{
++		
++		case DSPF_ARGB:                /* 32 bit  ARGB (4 byte, alpha 8@24, red 8@16, green 8@8, blue 8@0) */
++		case DSPF_AYUV	:			   /* 32 bit  AYUV (4 byte, alpha 8@24, Y 8@16, Cb 8@8, Cr 8@0) */
++			cf = G2D_FMT_ARGB_AYUV8888;
++			break;	
++			
++		case DSPF_ARGB4444 :		   /* 16 bit  ARGB (2 byte, alpha 4@12, red 4@8, green 4@4, blue 4@0) */
++			cf = G2D_FMT_ARGB4444;
++			break;
++			
++		case DSPF_RGBA4444 :		   /* 16 bit  RGBA (2 byte, red 4@12, green 4@8, blue 4@4, alpha 4@0) */
++			cf = G2D_FMT_RGBA4444;
++			break;
++
++		case DSPF_ARGB1555:            /* 16 bit  ARGB (2 byte, alpha 1@15, red 5@10, green 5@5, blue 5@0) */
++			cf = G2D_FMT_ARGB1555;
++			break;
++			
++		case DSPF_RGBA5551:            /* 16 bit  RGBA (2 byte, red 5@11, green 5@6, blue 5@1, alpha 1@0) */
++			cf = G2D_FMT_RGBA5551;
++			break;		
++			
++		case DSPF_RGB16:               /* 16 bit	RGB (2 byte, red 5@11, green 6@5, blue 5@0) */
++			cf = G2D_FMT_RGB565;
++			break;		
++			
++		case DSPF_UYVY: 			   /* 16 bit	YUV (4 byte/ 2 pixel, macropixel contains YCbYCr [31:0]) */
++			cf = G2D_FMT_IYUV422;
++			break;
++			
++		case DSPF_RGB24:		       /* 24 bit	RGB (3 byte, red 8@16, green 8@8, blue 8@0) */		
++		case DSPF_RGB32:               /* 24 bit	RGB (4 byte, nothing@24, red 8@16, green 8@8, blue 8@0) */		
++		case DSPF_RGB444 :			   /* 16 bit	RGB (2 byte, nothing @12, red 4@8, green 4@4, blue 4@0) */
++		case DSPF_RGB555  : 		   /* 16 bit	RGB (2 byte, nothing @15, red 5@10, green 5@5, blue 5@0) */ 	
++		case DSPF_BGR555 :			   /* 16 bit	BGR (2 byte, nothing @15, blue 5@10, green 5@5, red 5@0) */
++		case DSPF_NV21	:              /* 12 bit	YUV (8 bit Y plane followed by one 16 bit quarter size Cr|Cb [7:0|7:0] plane) */		
++		case DSPF_A4 :                 /* 4  bit alpha (1 byte/ 2 pixel, more significant nibble used first) */
++		case DSPF_ARGB1666 :           /* 1  bit alpha (3 byte/  alpha 1@18, red 6@12, green 6@6, blue 6@0) */
++        case DSPF_ARGB6666 :           /* 6  bit alpha (3 byte/  alpha 6@18, red 6@12, green 6@6, blue 6@0) */		
++		case DSPF_RGB18	:              /* 6  bit	RGB (3 byte/   red 6@12, green 6@6, blue 6@0) */		
++		case DSPF_LUT2:                /* 2  bit	LUT (1 byte/ 4 pixel, 2 bit color and alpha lookup from palette) */		
++		case DSPF_YUV444P :            /* 24 bit full YUV planar (8 bit Y plane followed by an 8 bit Cb and an 8 bit Cr plane) */
++		case DSPF_A8 :                 /* 8  bit alpha (1 byte, alpha 8@0), e.g. anti-aliased glyphs */			
++		case DSPF_RGB332 :             /* 8  bit	RGB (1 byte, red 3@5, green 3@2, blue 2@0) */
++		case DSPF_YUY2: 			   /* 16 bit	YUV (4 byte/ 2 pixel, macropixel contains CbYCrY [31:0]) */ 
++		case DSPF_I420:                /* 12 bit	YUV (8 bit Y plane followed by 8 bit quarter size U/V planes) */
++		case DSPF_YV12:                /* 12 bit	YUV (8 bit Y plane followed by 8 bit quarter size V/U planes) */
++		case DSPF_LUT8:                /* 8  bit	LUT (8 bit color and alpha lookup from palette) */
++		case DSPF_ALUT44:              /* 8  bit  ALUT (1 byte, alpha 4@4, color lookup 4@0) */
++		case DSPF_AiRGB	:              /* 32 bit  ARGB (4 byte, inv. alpha 8@24, red 8@16, green 8@8, blue 8@0) */
++		case DSPF_A1:                  /* 1  bit alpha (1 byte/ 8 pixel, most significant bit used first) */
++		case DSPF_NV12:                /* 12 bit	YUV (8 bit Y plane followed by one 16 bit quarter size Cb|Cr [7:0|7:0] plane) */
++		case DSPF_NV16:                /* 16 bit	YUV (8 bit Y plane followed by one 16 bit half width Cb|Cr [7:0|7:0] plane) */
++		case DSPF_ARGB2554: 		   /* 16 bit  ARGB (2 byte, alpha 2@14, red 5@9, green 5@4, blue 4@0) */
++		case DSPF_ARGB8565 :           /* 24 bit  ARGB (3 byte, alpha 8@16, red 5@11, green 6@5, blue 5@0) */
++		case DSPF_AVYU:                /* 32 bit  AVYU 4:4:4 (4 byte, alpha 8@24, Cr 8@16, Y 8@8, Cb 8@0) */
++		case DSPF_VYU	:              /* 24 bit	VYU 4:4:4 (3 byte, Cr 8@16, Y 8@8, Cb 8@0) */
++		case DSPF_A1_LSB :             /* 1  bit alpha (1 byte/ 8 pixel, LEAST significant bit used first) */
++		case DSPF_YV16	:              /* 16 bit	YUV (8 bit Y plane followed by 8 bit 2x1 subsampled V/U planes) */
++		case DSPF_UNKNOWN : 		   /* unknown or unspecified format */	
++			break;		
++	
++	}
+ 
+-     return true;
++	return cf;
+ }
+-
+diff -uN DirectFB-1.4.11_org/gfxdrivers/vmware/vmware_2d.h DirectFB-1.4.11/gfxdrivers/vmware/vmware_2d.h
+--- DirectFB-1.4.11_org/gfxdrivers/vmware/vmware_2d.h	2010-10-31 16:49:49.000000000 +0800
++++ DirectFB-1.4.11/gfxdrivers/vmware/vmware_2d.h	2012-09-28 16:48:59.448245000 +0800
+@@ -23,15 +23,13 @@
+ #ifndef __VMWARE_2D_H__
+ #define __VMWARE_2D_H__
+ 
++#define VMWARE_SUPPORTED_DRAWINGFLAGS      (DSDRAW_BLEND)//DSDRAW_NOFX | DSDRAW_BLEND
+ 
+-#define VMWARE_SUPPORTED_DRAWINGFLAGS      (DSDRAW_NOFX)
++#define VMWARE_SUPPORTED_DRAWINGFUNCTIONS  (DFXL_FILLRECTANGLE)//DFXL_NONE DFXL_FILLRECTANGLE
+ 
+-#define VMWARE_SUPPORTED_DRAWINGFUNCTIONS  (DFXL_FILLRECTANGLE)
+-
+-#define VMWARE_SUPPORTED_BLITTINGFLAGS     (DSBLIT_NOFX)
+-
+-#define VMWARE_SUPPORTED_BLITTINGFUNCTIONS (DFXL_BLIT)
++#define VMWARE_SUPPORTED_BLITTINGFLAGS     (DSBLIT_SRC_COLORKEY|DSBLIT_DST_COLORKEY|DSBLIT_BLEND_ALPHACHANNEL|DSBLIT_BLEND_COLORALPHA|DSBLIT_ROTATE90|DSBLIT_ROTATE180|DSBLIT_ROTATE270|DSBLIT_FLIP_HORIZONTAL|DSBLIT_FLIP_VERTICAL)//DSBLIT_NOFX
+ 
++#define VMWARE_SUPPORTED_BLITTINGFUNCTIONS (DFXL_BLIT|DFXL_STRETCHBLIT)//DFXL_NONE DFXL_BLIT|DFXL_STRETCHBLIT
+ 
+ DFBResult vmwareEngineSync   ( void                *drv,
+                                void                *dev );
+@@ -63,5 +61,9 @@
+                                int                  dx,
+                                int                  dy );
+ 
+-#endif
++bool      vmwareStretchBlit  ( void                *drv,
++                               void                *dev,
++                               DFBRectangle        *srect,
++                               DFBRectangle        *drect );
+ 
++#endif
+diff -uN DirectFB-1.4.11_org/gfxdrivers/vmware/vmware_gfxdriver.c DirectFB-1.4.11/gfxdrivers/vmware/vmware_gfxdriver.c
+--- DirectFB-1.4.11_org/gfxdrivers/vmware/vmware_gfxdriver.c	2010-10-31 16:49:49.000000000 +0800
++++ DirectFB-1.4.11/gfxdrivers/vmware/vmware_gfxdriver.c	2012-09-28 16:48:59.448245000 +0800
+@@ -21,22 +21,29 @@
+ */
+ 
+ #include <stdio.h>
+-
+ #include <directfb.h>
+-
+ #include <direct/debug.h>
+ #include <direct/messages.h>
+-
+ #include <core/gfxcard.h>
++#include <fcntl.h>
++#include <linux/fb.h>
++#include <sys/mman.h>
+ 
+ #include "vmware_2d.h"
+ #include "vmware_gfxdriver.h"
+ 
+ 
+ #include <core/graphics_driver.h>
++#include <core/surface_pool.h>
+ 
+-DFB_GRAPHICS_DRIVER( vmware )
++int hmp =0;
++extern unsigned int mpmem[100];
++extern unsigned int fbdata[3];
++CoreSurfacePool *vmware_pool;
+ 
++extern SurfacePoolFuncs vmwareSurfacePoolFuncs;
++
++DFB_GRAPHICS_DRIVER( vmware )
+ 
+ /**********************************************************************************************************************/
+ 
+@@ -47,8 +54,8 @@
+           case FB_ACCEL_VMWARE_BLITTER:
+                return 1;
+      }
+-
+-     return 0;
++        
++     return 1;
+ }
+ 
+ static void
+@@ -86,6 +93,11 @@
+      funcs->SetState      = vmwareSetState;
+      funcs->FillRectangle = vmwareFillRectangle;
+      funcs->Blit          = vmwareBlit;
++	 funcs->StretchBlit   = vmwareStretchBlit;
++	 
++	 dfb_surface_pool_initialize( core, &vmwareSurfacePoolFuncs, &vmware_pool );   
++//	 dfb_surface_pool_join( core, vmware_pool, &vmwareSurfacePoolFuncs );
++	 
+ 
+      return DFB_OK;
+ }
+@@ -96,6 +108,11 @@
+                     void               *driver_data,
+                     void               *device_data )
+ {
++    
++     int fbfd, fbsize;
++     struct fb_var_screeninfo vinfo;
++     unsigned char *fbbuf;
++ 
+      /* fill device info */
+      snprintf( device_info->vendor, DFB_GRAPHICS_DEVICE_INFO_VENDOR_LENGTH, "VMWare" );
+      snprintf( device_info->name,   DFB_GRAPHICS_DEVICE_INFO_NAME_LENGTH,   "(fake) Blitter" );
+@@ -108,8 +125,15 @@
+      device_info->caps.accel    = VMWARE_SUPPORTED_DRAWINGFUNCTIONS |
+                                   VMWARE_SUPPORTED_BLITTINGFUNCTIONS;
+      device_info->caps.drawing  = VMWARE_SUPPORTED_DRAWINGFLAGS;
+-     device_info->caps.blitting = VMWARE_SUPPORTED_BLITTINGFLAGS;
+-
++     device_info->caps.blitting = VMWARE_SUPPORTED_BLITTINGFLAGS;  
++	
++	 //open g2d
++     if((hmp = open("/dev/g2d",O_RDWR)) == -1)
++     {
++     	 printf("[VMWare][%d][%s][%s]open g2d dev failed!\n", __LINE__, __FILE__,__FUNCTION__);
++         return DFB_FAILURE;
++     }
++	 
+      return DFB_OK;
+ }
+ 
+@@ -118,6 +142,11 @@
+                      void               *driver_data,
+                      void               *device_data )
+ {
++	if(hmp != NULL)
++	{
++    	close(hmp);//close the g2d driver
++		hmp =0;
++	}
+ }
+ 
+ static void
+diff -uN DirectFB-1.4.11_org/gfxdrivers/vmware/vmware_gfxdriver.h DirectFB-1.4.11/gfxdrivers/vmware/vmware_gfxdriver.h
+--- DirectFB-1.4.11_org/gfxdrivers/vmware/vmware_gfxdriver.h	2010-10-31 16:49:49.000000000 +0800
++++ DirectFB-1.4.11/gfxdrivers/vmware/vmware_gfxdriver.h	2012-09-28 16:48:59.448245000 +0800
+@@ -30,22 +30,35 @@
+ 
+ typedef struct {
+      /* validation flags */
+-     int                    v_flags;
++     int                      v_flags;
+ 
+      /* cached/computed values */
+-     void                  *dst_addr;
+-     unsigned long          dst_pitch;
+-     DFBSurfacePixelFormat  dst_format;
+-     unsigned long          dst_bpp;
+-
+-     void                  *src_addr;
+-     unsigned long          src_pitch;
+-     DFBSurfacePixelFormat  src_format;
+-     unsigned long          src_bpp;
++     void                    *dst_addr;
++	 void                    *dst_paddr;
++     unsigned long            dst_pitch;
++     DFBSurfacePixelFormat    dst_format;
++     unsigned long            dst_bpp;
++
++     void                    *src_addr;
++	 void                    *src_paddr;
++     unsigned long            src_pitch;
++     DFBSurfacePixelFormat    src_format;
++     unsigned long            src_bpp;
+ 
+-     unsigned long          color_pixel;
++     unsigned long            color_pixel;
+ 
+      /** Add shared data here... **/
++     u32                      src_colorkey;
++	 u32                      alpha;
++     DFBSurfaceDrawingFlags   drawingflags; 
++     DFBSurfaceBlittingFlags  blittingflags;
++	 u32                      src_width;
++	 u32                      src_height;
++	 u32                      dst_width;
++	 u32                      dst_height;
++     
++//     int hmp;//mp handle
++     
+ } VMWareDeviceData;
+ 
+ 
+diff -uN DirectFB-1.4.11_org/gfxdrivers/vmware/vmware_surface_pool.c DirectFB-1.4.11/gfxdrivers/vmware/vmware_surface_pool.c
+--- DirectFB-1.4.11_org/gfxdrivers/vmware/vmware_surface_pool.c	1970-01-01 08:00:00.000000000 +0800
++++ DirectFB-1.4.11/gfxdrivers/vmware/vmware_surface_pool.c	2012-09-28 16:48:59.448245000 +0800
+@@ -0,0 +1,349 @@
++/*
++   (c) Copyright 2001-2009  The world wide DirectFB Open Source Community (directfb.org)
++   (c) Copyright 2000-2004  Convergence (integrated media) GmbH
++
++   All rights reserved.
++
++   Written by Denis Oliver Kropp <dok@directfb.org>,
++              Andreas Hundt <andi@fischlustig.de>,
++              Sven Neumann <neo@directfb.org>,
++              Ville Syrj盲l盲 <syrjala@sci.fi> and
++              Claudio Ciccani <klan@users.sf.net>.
++
++   This library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2 of the License, or (at your option) any later version.
++
++   This library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with this library; if not, write to the
++   Free Software Foundation, Inc., 59 Temple Place - Suite 330,
++   Boston, MA 02111-1307, USA.
++*/
++
++#include <config.h>
++#include <direct/debug.h>
++#include <direct/mem.h>
++#include <fusion/fusion.h>
++#include <core/core.h>
++#include <core/surface_pool.h>
++#include <sys/mman.h>
++#include <fcntl.h>
++#include <sys/ioctl.h>
++
++#include "g2d_driver.h"
++
++extern int hmp;
++unsigned int pmpmem[100];
++unsigned int fbdata[3];
++unsigned int mpmem_size[100];
++
++/**********************************************************************************************************************/
++
++typedef struct {
++} LocalPoolData;
++
++typedef struct {
++     FusionCall  call;
++} LocalPoolLocalData;
++
++typedef struct {
++     int         magic;
++
++     void       *addr;
++     int         pitch;
++     int         size;
++
++     FusionCall  call;
++     FusionID    fid;
++} LocalAllocationData;
++
++static int get_phyaddr(unsigned int vaddr);
++
++static FusionCallHandlerResult
++vmware_surface_pool_call_handler(int           caller,
++                                 int           call_arg,
++                                 void         *call_ptr,
++                                 void         *ctx,
++                                 unsigned int  serial,
++                                 int          *ret_val )
++{
++	int i;
++
++	if(hmp)
++	{
++		for(i=0;i<100;i++)
++		{
++			if(call_ptr==pmpmem[i])//get index
++			{
++				break;
++			}
++		}
++
++		if(ioctl(hmp,G2D_CMD_MEM_RELEASE,i) < 0)//release mpmem			
++		{				
++   			printf("[vmware][%d][%s][%s]G2D_CMD_MEM_RELEASE failure!\n",__LINE__, __FILE__,__FUNCTION__);
++			return FCHR_RETURN;//use this return correct??			 
++		} 
++		munmap(pmpmem[i], mpmem_size[i]);
++		pmpmem[i] = 0;
++		mpmem_size[i]=0;
++	}
++	else
++	{
++		D_FREE( call_ptr );
++	} 
++
++	*ret_val = 0;
++
++	return FCHR_RETURN;
++
++}
++
++/**********************************************************************************************************************/
++
++static int
++vmwarePoolDataSize( void )
++{
++     return sizeof(LocalPoolData);
++}
++
++static int
++vmwarePoolLocalDataSize( void )
++{
++     return sizeof(LocalPoolLocalData);
++}
++
++static int
++vmwareAllocationDataSize( void )
++{
++     return sizeof(LocalAllocationData);
++}
++
++static DFBResult
++vmwareInitPool( CoreDFB                   *core,
++               CoreSurfacePool            *pool,
++               void                       *pool_data,
++               void                       *pool_local,
++               void                       *system_data,
++               CoreSurfacePoolDescription *ret_desc )
++{
++	 LocalPoolLocalData *local = pool_local;
++
++     D_MAGIC_ASSERT( pool, CoreSurfacePool );
++     D_ASSERT( pool_local != NULL );
++     D_ASSERT( ret_desc != NULL );
++
++     ret_desc->caps              = CSPCAPS_NONE;
++     ret_desc->access[CSAID_CPU] = CSAF_READ | CSAF_WRITE | CSAF_SHARED;
++     ret_desc->access[CSAID_GPU] = CSAF_READ | CSAF_WRITE | CSAF_SHARED;
++     ret_desc->types             = CSTF_FONT | CSTF_INTERNAL;
++     ret_desc->priority          = CSPP_PREFERED;
++     snprintf( ret_desc->name, DFB_SURFACE_POOL_DESC_NAME_LENGTH, "System Memory" );
++
++     fusion_call_init( &local->call, vmware_surface_pool_call_handler, local, dfb_core_world(core) );  
++	 
++     return DFB_OK;
++}
++
++
++static DFBResult
++vmwareDestroyPool(CoreSurfacePool *pool,
++                  void            *pool_data,
++                  void            *pool_local )
++{
++     CoreSurfaceAllocation *allocation;
++     LocalPoolLocalData    *local = pool_local;
++     LocalAllocationData   *data;
++     FusionID               fid;
++
++     DFBResult res;
++     int       i;
++
++     D_MAGIC_ASSERT( pool, CoreSurfacePool );
++     D_ASSERT( pool_local != NULL );
++
++     res = fusion_call_destroy( &local->call );
++     fid = fusion_id( dfb_core_world(NULL) );
++
++     /* remove the local allocations */
++     fusion_vector_foreach (allocation, i, pool->allocs) {
++          data = allocation->data;
++          if( data->fid == fid )
++               D_FREE( data->addr );
++     }
++
++     return res;    
++}
++
++static DFBResult
++vmwareAllocateBuffer(CoreSurfacePool       *pool,
++                     void                  *pool_data,
++                     void                  *pool_local,
++                     CoreSurfaceBuffer     *buffer,
++                     CoreSurfaceAllocation *allocation,
++                     void                  *alloc_data )
++{
++     int i;
++     int index;
++    
++     CoreSurface         *surface;
++     LocalPoolLocalData  *local = pool_local;
++     LocalAllocationData *alloc = alloc_data;
++
++     D_MAGIC_ASSERT( pool, CoreSurfacePool );
++     D_MAGIC_ASSERT( buffer, CoreSurfaceBuffer );
++     D_ASSERT( alloc != NULL );
++
++     surface = buffer->surface;
++     D_MAGIC_ASSERT( surface, CoreSurface );
++
++     dfb_surface_calc_buffer_size( surface, 8, 0, &alloc->pitch, &alloc->size );
++
++     if (hmp)//check
++     {
++
++            index = ioctl(hmp,G2D_CMD_MEM_REQUEST,alloc->size);//get index		 	
++            if(index < 0)			
++            {               
++                return DFB_FAILURE;           
++            }
++            else
++            {
++                if(!pmpmem[index])//check index no used before
++                {
++                    if(ioctl(hmp,G2D_CMD_MEM_SELIDX,index) < 0)
++                    {               
++   						printf("[vmware][%d][%s][%s]G2D_CMD_MEM_SELIDX failure!\n",__LINE__, __FILE__,__FUNCTION__);
++                        return DFB_FAILURE;           
++                    }           
++                    pmpmem[index] = mmap(NULL, alloc->size, PROT_READ | PROT_WRITE, MAP_SHARED, hmp, 0);//get virtual addr                            
++                    mpmem_size[index]=alloc->size;
++                    alloc->addr = pmpmem[index];//get addr
++                }
++                else
++                {
++   					printf("[vmware][%d][%s][%s]get mpmem index error!\n",__LINE__, __FILE__,__FUNCTION__);
++                    return DFB_FAILURE;           
++                }
++            }
++     }
++     else
++     {
++        alloc->addr = D_MALLOC( alloc->size );
++        if (!alloc->addr)
++             return D_OOM();
++     }    
++
++     alloc->call = local->call;
++     alloc->fid  = fusion_id( dfb_core_world(NULL) );
++
++     D_MAGIC_SET( alloc, LocalAllocationData );
++
++     allocation->flags = CSALF_VOLATILE;
++     allocation->size  = alloc->size;
++
++     return DFB_OK;
++
++}
++
++static DFBResult
++vmwareDeallocateBuffer(CoreSurfacePool       *pool,
++                       void                  *pool_data,
++                       void                  *pool_local,
++                       CoreSurfaceBuffer     *buffer,
++                       CoreSurfaceAllocation *allocation,
++                       void                  *alloc_data )
++{
++     DFBResult            ret;
++     LocalAllocationData *alloc = alloc_data;
++
++     D_MAGIC_ASSERT( pool, CoreSurfacePool );
++     D_MAGIC_ASSERT( buffer, CoreSurfaceBuffer );
++     D_MAGIC_ASSERT( alloc, LocalAllocationData );
++
++     ret = fusion_call_execute( &alloc->call, FCEF_ONEWAY, 0, alloc->addr, NULL );
++
++     D_MAGIC_CLEAR( alloc );
++
++     return DFB_OK;
++}
++
++static DFBResult
++vmwareLock(CoreSurfacePool  	 *pool,
++           void                  *pool_data,
++           void                  *pool_local,
++           CoreSurfaceAllocation *allocation,
++           void                  *alloc_data,
++           CoreSurfaceBufferLock *lock )
++{
++     LocalAllocationData *alloc = alloc_data;
++
++     D_MAGIC_ASSERT( pool, CoreSurfacePool );
++     D_MAGIC_ASSERT( allocation, CoreSurfaceAllocation );
++     D_MAGIC_ASSERT( lock, CoreSurfaceBufferLock );
++     D_MAGIC_ASSERT( alloc, LocalAllocationData );
++
++     lock->addr  = alloc->addr;
++	 lock->phys  = get_phyaddr(alloc->addr);
++     lock->pitch = alloc->pitch;
++
++     return DFB_OK;
++}
++
++static DFBResult
++vmwareUnlock(CoreSurfacePool       *pool,
++             void                  *pool_data,
++             void                  *pool_local,
++             CoreSurfaceAllocation *allocation,
++             void                  *alloc_data,
++             CoreSurfaceBufferLock *lock )
++{
++     LocalAllocationData *alloc = alloc_data;
++
++     D_MAGIC_ASSERT( pool, CoreSurfacePool );
++     D_MAGIC_ASSERT( allocation, CoreSurfaceAllocation );
++     D_MAGIC_ASSERT( lock, CoreSurfaceBufferLock );
++     D_MAGIC_ASSERT( alloc, LocalAllocationData );
++
++     return DFB_OK;
++}
++
++const SurfacePoolFuncs vmwareSurfacePoolFuncs = {
++     .PoolDataSize       = vmwarePoolDataSize,
++     .PoolLocalDataSize  = vmwarePoolLocalDataSize,
++     .AllocationDataSize = vmwareAllocationDataSize,
++
++     .InitPool           = vmwareInitPool,
++     .DestroyPool        = vmwareDestroyPool,
++     .AllocateBuffer     = vmwareAllocateBuffer,
++     .DeallocateBuffer   = vmwareDeallocateBuffer,
++     .Lock               = vmwareLock,
++     .Unlock             = vmwareUnlock,
++};
++
++static int get_phyaddr(unsigned int vaddr)
++{
++	int i;
++
++	int phy = 0;
++	
++	if(hmp)
++	{
++		for(i=0;i<100;i++)
++		{
++			if(vaddr==pmpmem[i])
++				break;
++		}
++		
++		phy = ioctl(hmp,G2D_CMD_MEM_GETADR,i);
++	}
++
++	return phy;
++
++}

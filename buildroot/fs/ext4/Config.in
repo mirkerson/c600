@@ -1,0 +1,21 @@
+config BR2_TARGET_ROOTFS_EXT4
+	bool "ext4 root filesystem"
+	help
+	  Build an ext4 root filesystem
+
+config BR2_TARGET_ROOTFS_EXT4_BLOCKS
+	int "size in blocks (leave at 0 for auto calculation)"
+	depends on BR2_TARGET_ROOTFS_EXT4
+	default 0
+
+config BR2_TARGET_ROOTFS_EXT4_INODES
+	int "inodes (leave at 0 for auto calculation)"
+	depends on BR2_TARGET_ROOTFS_EXT4
+	default 0
+
+config BR2_TARGET_ROOTFS_EXT4_RESBLKS
+	int "reserved blocks percentage"
+	depends on BR2_TARGET_ROOTFS_EXT4
+	default 0
+
+

@@ -1,0 +1,18 @@
+diff --git a/plugins/input-raw.c b/plugins/input-raw.c
+index 9511a0d..4ac3677 100644
+--- a/plugins/input-raw.c
++++ b/plugins/input-raw.c
+@@ -78,10 +78,13 @@ static int check_fd(struct tslib_input *i)
+ 		return -1;
+ 	}
+ 
++	//FIXME: just make it works
++#if 0
+ 	if (version != EV_VERSION) {
+ 		fprintf(stderr, "tslib: Selected device uses a different version of the event protocol than tslib was compiled for\n");
+ 		return -1;
+ 	}
++#endif
+ 
+ 	if ( (ioctl(ts->fd, EVIOCGBIT(0, sizeof(evbit)), evbit) < 0) ||
+ 		!(evbit[BIT_WORD(EV_ABS)] & BIT_MASK(EV_ABS)) ||

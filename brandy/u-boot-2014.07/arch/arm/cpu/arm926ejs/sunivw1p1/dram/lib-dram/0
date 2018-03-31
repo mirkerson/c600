@@ -1,0 +1,1 @@
+chip_id_sd.o: chip_id_sd.c chip_id_sd.h

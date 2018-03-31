@@ -1,0 +1,4 @@
+config BR2_PACKAGE_PVR_UTILS
+  bool "pvr-utils"
+  help 
+  pvr-utils is an userspace services and a set of test programs for pvr-gpu drivers

@@ -1,0 +1,29 @@
+#
+# NOTE! Don't add files that are generated in specific
+# subdirectories here. Add them in the ".gitignore" file
+# in that subdirectory instead.
+#
+# Normal rules
+#
+
+*.rej
+*.orig
+*.a
+*.o
+*~
+*.swp
+*.patch
+*.bin
+*.axf
+
+#
+# Top-level generic files
+#
+
+#
+# Generated files
+#
+
+*.depend
+
+dragonsecboot

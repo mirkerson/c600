@@ -1,0 +1,15 @@
+1.Instruction
+   工作在控制台模式（framebuffer）下的截图软件
+   应用环境：显卡（bpp） 16位色 或 32位色
+
+2.Install
+  a. 在终端下打开文件（jpegtool）存放位置
+  b. tar -xzf jpegtool.tar.gz 
+  c. cd jpegtool
+  d. make
+  e. make cleanobj
+  f. sudo cp jpegtool /usr/bin/
+
+3.Usage:
+  a. sudo ./jpegtool ＊.jpeg
+

@@ -1,0 +1,292 @@
+diff -uN DirectFB-examples-1.2.0_org/src/df_dok.c DirectFB-examples-1.2.0/src/df_dok.c
+--- DirectFB-examples-1.2.0_org/src/df_dok.c	2008-05-20 16:42:08.000000000 +0800
++++ DirectFB-examples-1.2.0/src/df_dok.c	2012-09-28 17:01:22.316353000 +0800
+@@ -192,11 +192,11 @@
+     0, 0, 0, "MPixel/sec", load_image },
+   { "Anti-aliased Text",
+     "This is the DirectFB benchmarking tool, let's start with some text!",
+-    "Anti-aliased Text", "draw-string", true,
++    "Anti-aliased Text", "draw-string", false,
+     0, 0, 0, "KChars/sec",  draw_string },
+   { "Anti-aliased Text (blend)",
+     "Alpha blending based on color alpha",
+-    "Alpha Blended Anti-aliased Text", "draw-string-blend", true,
++    "Alpha Blended Anti-aliased Text", "draw-string-blend", false,
+     0, 0, 0, "KChars/sec",  draw_string_blend },
+   { "Fill Rectangle",
+     "Ok, we'll go on with some opaque filled rectangles!",
+@@ -224,11 +224,11 @@
+     0, 0, 0, "MPixel/sec", fill_triangle_blend },
+   { "Draw Rectangle",
+     "Now pass over to non filled rectangles!",
+-    "Rectangle Outlines", "draw-rect", true,
++    "Rectangle Outlines", "draw-rect", false,
+     0, 0, 0, "KRects/sec", draw_rect },
+   { "Draw Rectangle (blend)",
+     "Again, we want it with alpha blending!",
+-    "Alpha Blended Rectangle Outlines", "draw-rect-blend", true,
++    "Alpha Blended Rectangle Outlines", "draw-rect-blend", false,
+     0, 0, 0, "KRects/sec", draw_rect_blend },
+   { "Draw Lines [10]",
+     "Can we have some opaque lines, please?",
+DirectFB-examples-1.2.0_org/src/df_knuckles 和 DirectFB-examples-1.2.0/src/df_knuckles 有共同的子目录
+DirectFB-examples-1.2.0_org/src/df_neo 和 DirectFB-examples-1.2.0/src/df_neo 有共同的子目录
+diff -uN DirectFB-examples-1.2.0_org/src/df_sunxi_test.c DirectFB-examples-1.2.0/src/df_sunxi_test.c
+--- DirectFB-examples-1.2.0_org/src/df_sunxi_test.c	1970-01-01 08:00:00.000000000 +0800
++++ DirectFB-examples-1.2.0/src/df_sunxi_test.c	2012-09-28 16:49:45.828710000 +0800
+@@ -0,0 +1,166 @@
++
++#include <stdio.h>
++#include <unistd.h>
++#include <directfb.h>
++
++static IDirectFB *dfb = NULL;
++static IDirectFBSurface *primary = NULL;
++static IDirectFBSurface *background;
++static IDirectFBSurface *src1;
++static IDirectFBImageProvider  *provider;
++static DFBSurfacePixelFormat pixelformat = DSPF_UNKNOWN;
++static int SW, SH;
++static int ch;
++static int x, y;
++
++//DSBLIT_NOFX
++//DSBLIT_BLEND_ALPHACHANNEL
++//DSBLIT_BLEND_COLORALPHA
++//DSBLIT_SRC_COLORKEY
++//DSBLIT_XOR
++
++//DSBLIT_ROTATE90          
++//DSBLIT_ROTATE180        
++//DSBLIT_ROTATE270        
++//DSBLIT_FLIP_HORIZONTAL  
++//DSBLIT_FLIP_VERTICAL    
++
++static DFBSurfaceBlittingFlags blittingflag1 = DSBLIT_NOFX;
++static DFBSurfaceBlittingFlags blittingflag2 = 0;
++
++#define DFBCHECK(x...)                                                  \
++{                                                                       \
++    DFBResult err = x;                                              \
++                                                                    \
++    if (err != DFB_OK)                                              \
++    {                                                               \
++        fprintf( stderr, "%s <%d>:\n\t", __FILE__, __LINE__ );  \
++        DirectFBErrorFatal( #x, err );                          \
++    }                                                               \
++}
++
++int main(int argc, char **argv)
++{
++    DFBSurfaceDescription dsc;
++    DFBCHECK (DirectFBInit (&argc, &argv));
++    DFBCHECK (DirectFBCreate (&dfb));
++    DFBCHECK (dfb->SetCooperativeLevel (dfb, DFSCL_FULLSCREEN));
++    
++    dsc.flags = DSDESC_CAPS;
++    dsc.caps = DSCAPS_PRIMARY;
++    
++    DFBCHECK(dfb->CreateSurface( dfb, &dsc, &primary ));
++    
++    if (pixelformat == DSPF_UNKNOWN)
++      primary->GetPixelFormat( primary, &pixelformat );
++    
++    primary->GetSize( primary, &SW, &SH );
++    primary->Clear( primary, 0, 0, 0xff, 0xff );
++    
++////////////////////////////////////////////////////////////////////////////////////////////    
++    DFBCHECK(dfb->CreateImageProvider( dfb, DATADIR"/background.jpg", &provider ));    
++     
++    dsc.flags = DSDESC_WIDTH | DSDESC_HEIGHT;
++    dsc.width = SW;
++    dsc.height = SH;
++    DFBCHECK(dfb->CreateSurface( dfb, &dsc, &background ));    
++     
++    DFBCHECK(provider->RenderTo( provider, background, NULL ));
++    provider->Release( provider );    
++     
++    primary->SetBlittingFlags( primary, DSBLIT_NOFX );
++    primary->Blit( primary, background, NULL, 0, 0 );
++////////////////////////////////////////////////////////////////////////////////////////////    
++    DFBCHECK(dfb->CreateImageProvider( dfb, DATADIR"/apple-red.png", &provider ));
++    DFBCHECK(provider->GetSurfaceDescription( provider, &dsc ));
++    
++    DFBCHECK(dfb->CreateSurface( dfb, &dsc, &src1 ));
++    DFBCHECK(provider->RenderTo( provider, src1, NULL ));
++    provider->Release( provider );
++    
++    primary->SetColor( primary, 0xFF, 0xFF, 0xFF, 0xa0 );
++    primary->SetBlittingFlags( primary, blittingflag1|blittingflag2 );
++    x=(SW - dsc.width) / 2 - 200;
++    y=(SH - dsc.height) / 2;
++    primary->Blit( primary, src1, NULL, x, y);
++    
++////////////////////////////////////////////////////////////////////////////////////////////    
++    while(1)
++    {
++        ch=getchar();
++        if(ch==' ')//exit
++            break;
++        else{
++         if(ch=='q')//left
++            {
++                x -=1;
++            }
++        else if(ch=='w')//right
++            {
++                x +=1;
++            }
++        else if(ch=='e')//top
++            {
++                y -=1;
++            }
++        else if(ch=='r')//bottom
++            {
++                y +=1;
++            }
++        else if(ch=='1')//
++        {
++            blittingflag2 =0;
++        }
++        else if(ch=='2')//
++        {
++            blittingflag2 =DSBLIT_ROTATE90;
++        }
++        else if(ch=='3')//
++        {
++            blittingflag2 =DSBLIT_ROTATE180;
++        }
++        else if(ch=='4')//
++        {
++            blittingflag2 =DSBLIT_ROTATE270;
++        }
++        else if(ch=='5')//
++        {
++            blittingflag2 =DSBLIT_FLIP_HORIZONTAL;
++        }
++        else if(ch=='6')//
++        {
++            blittingflag2 =DSBLIT_FLIP_VERTICAL;
++        }
++        else if(ch=='a')//
++        {
++            blittingflag1 =DSBLIT_NOFX;
++        }
++        else if(ch=='s')//
++        {
++            blittingflag1 =DSBLIT_BLEND_ALPHACHANNEL;
++        }
++        else if(ch=='d')//
++        {
++            blittingflag1 =DSBLIT_BLEND_COLORALPHA;
++        }
++        else if(ch=='f')//
++        {
++            blittingflag1 =DSBLIT_SRC_COLORKEY;
++        }
++        else if(ch=='g')//
++        {
++            blittingflag1 =DSBLIT_XOR;
++        }
++       
++    primary->SetBlittingFlags( primary, DSBLIT_NOFX );
++    primary->Blit( primary, background, NULL, 0, 0 );
++    primary->SetBlittingFlags( primary,  blittingflag1|blittingflag2);
++    primary->Blit( primary, src1, NULL, x, y);
++        }
++
++    }
++    //primary->Clear( primary, 0xff, 0xff, 0xff, 0xff );
++    primary->Release(primary);
++    dfb->Release(dfb);//FillRectangle
++    return 42;
++}
+diff -uN DirectFB-examples-1.2.0_org/src/Makefile.am DirectFB-examples-1.2.0/src/Makefile.am
+--- DirectFB-examples-1.2.0_org/src/Makefile.am	2008-05-05 23:26:25.000000000 +0800
++++ DirectFB-examples-1.2.0/src/Makefile.am	2012-10-11 10:56:50.958187723 +0800
+@@ -26,6 +26,7 @@
+ 
+ bin_PROGRAMS = \
+ 	df_andi \
++	df_sunxi_test \	
+ 	df_bltload \
+ 	df_drivertest \
+ 	df_cpuload \
+@@ -53,6 +54,8 @@
+ 
+ df_andi_SOURCES = df_andi.c 
+ df_andi_LDADD  = $(LIBADDS)
++df_test_SOURCES = df_sunxi_test.c 
++df_sunxi_test_LDADD  = $(LIBADDS)
+ 
+ df_drivertest_SOURCES = df_drivertest.c 
+ df_drivertest_LDADD  = $(LIBADDS)
+diff -uN DirectFB-examples-1.2.0_org/src/Makefile.in DirectFB-examples-1.2.0/src/Makefile.in
+--- DirectFB-examples-1.2.0_org/src/Makefile.in	2008-06-10 00:44:10.000000000 +0800
++++ DirectFB-examples-1.2.0/src/Makefile.in	2012-10-11 11:02:16.198187675 +0800
+@@ -33,7 +33,7 @@
+ build_triplet = @build@
+ host_triplet = @host@
+ noinst_PROGRAMS = ve_test$(EXEEXT)
+-bin_PROGRAMS = df_andi$(EXEEXT) df_bltload$(EXEEXT) \
++bin_PROGRAMS = df_andi$(EXEEXT) df_bltload$(EXEEXT) df_sunxi_test$(EXEEXT) \
+ 	df_drivertest$(EXEEXT) df_cpuload$(EXEEXT) \
+ 	df_databuffer$(EXEEXT) df_dok$(EXEEXT) df_fire$(EXEEXT) \
+ 	df_flip$(EXEEXT) df_fonts$(EXEEXT) df_input$(EXEEXT) \
+@@ -59,6 +59,10 @@
+ df_andi_OBJECTS = $(am_df_andi_OBJECTS)
+ am__DEPENDENCIES_1 =
+ df_andi_DEPENDENCIES = $(am__DEPENDENCIES_1)
++am_df_sunxi_test_OBJECTS = df_sunxi_test.$(OBJEXT)
++df_sunxi_test_OBJECTS = $(am_df_sunxi_test_OBJECTS)
++am__DEPENDENCIES_1 =
++df_sunxi_test_DEPENDENCIES = $(am__DEPENDENCIES_1)
+ am_df_bltload_OBJECTS = df_bltload.$(OBJEXT)
+ df_bltload_OBJECTS = $(am_df_bltload_OBJECTS)
+ df_bltload_DEPENDENCIES = $(am__DEPENDENCIES_1)
+@@ -141,7 +145,7 @@
+ 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
+ CCLD = $(CC)
+ LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
+-SOURCES = $(df_andi_SOURCES) $(df_bltload_SOURCES) \
++SOURCES = $(df_andi_SOURCES) $(df_bltload_SOURCES) $(df_sunxi_test_SOURCES) \
+ 	$(df_cpuload_SOURCES) $(df_databuffer_SOURCES) \
+ 	$(df_dioload_SOURCES) $(df_dok_SOURCES) \
+ 	$(df_drivertest_SOURCES) $(df_fire_SOURCES) $(df_flip_SOURCES) \
+@@ -153,7 +157,7 @@
+ 	$(df_texture_SOURCES) $(df_video_SOURCES) \
+ 	$(df_video_particle_SOURCES) $(df_window_SOURCES) \
+ 	$(pss_SOURCES) $(ve_test_SOURCES)
+-DIST_SOURCES = $(df_andi_SOURCES) $(df_bltload_SOURCES) \
++DIST_SOURCES = $(df_andi_SOURCES) $(df_bltload_SOURCES) $(df_sunxi_test_SOURCES) \
+ 	$(df_cpuload_SOURCES) $(df_databuffer_SOURCES) \
+ 	$(df_dioload_SOURCES) $(df_dok_SOURCES) \
+ 	$(df_drivertest_SOURCES) $(df_fire_SOURCES) $(df_flip_SOURCES) \
+@@ -291,6 +295,8 @@
+ @WATER_RUNS_TRUE@WATER_PROGS = df_matrix_water
+ df_andi_SOURCES = df_andi.c 
+ df_andi_LDADD = $(LIBADDS)
++df_sunxi_test_SOURCES = df_sunxi_test.c 
++df_sunxi_test_LDADD = $(LIBADDS)
+ df_drivertest_SOURCES = df_drivertest.c 
+ df_drivertest_LDADD = $(LIBADDS)
+ df_bltload_SOURCES = df_bltload.c 
+@@ -401,6 +407,9 @@
+ df_andi$(EXEEXT): $(df_andi_OBJECTS) $(df_andi_DEPENDENCIES) 
+ 	@rm -f df_andi$(EXEEXT)
+ 	$(LINK) $(df_andi_OBJECTS) $(df_andi_LDADD) $(LIBS)
++df_sunxi_test$(EXEEXT): $(df_sunxi_test_OBJECTS) $(df_sunxi_test_DEPENDENCIES) 
++	@rm -f df_sunxi_test$(EXEEXT)
++	$(LINK) $(df_sunxi_test_OBJECTS) $(df_sunxi_test_LDADD) $(LIBS)
+ df_bltload$(EXEEXT): $(df_bltload_OBJECTS) $(df_bltload_DEPENDENCIES) 
+ 	@rm -f df_bltload$(EXEEXT)
+ 	$(LINK) $(df_bltload_OBJECTS) $(df_bltload_LDADD) $(LIBS)
+@@ -484,6 +493,7 @@
+ 	-rm -f *.tab.c
+ 
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/df_andi.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/df_sunxi_test.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/df_bltload.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/df_cpuload.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/df_databuffer.Po@am__quote@
+DirectFB-examples-1.2.0_org/src/spacedream 和 DirectFB-examples-1.2.0/src/spacedream 有共同的子目录

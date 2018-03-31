@@ -1,0 +1,32 @@
+#
+# Video configuration for sunxi platform
+#
+
+menu "Video support for sunxi"
+	depends on FB
+
+config SUNIV_FB
+        tristate "DISP Driver Support(suniv)"
+        depends on ARCH_SUNIV
+        ---help---
+        default m
+
+config  SUNXI_BOOT_COLORBAR
+        bool "Show color bar when disp module registed(sunxi)"
+        depends on ARCH_SUNIV && SUNIV_FB
+        ---help---
+        default y
+
+config SUNIV_LCD
+        tristate "LCD Driver Support(suniv)"
+        depends on ARCH_SUNIV
+        ---help---
+        default m
+
+config SUNIV_HDMI
+        tristate "HDMI Driver Support(suniv)"
+        depends on ARCH_SUNIV
+        ---help---
+        default m
+
+endmenu

@@ -1,0 +1,4 @@
+config BR2_KERNEL_HEADER
+       bool "kernel header"
+       help
+         kernel header

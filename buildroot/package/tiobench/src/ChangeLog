@@ -1,0 +1,161 @@
+1999-11-02	Mika Kuoppala <miku@iki.fi>
+
+	* 0.01: initial version
+
+1999-11-30      James Manning <jmm@users.sf.net>
+
+	* 0.06: tiobench.sh fixes and block improvements 
+
+1999-12-01	Mika Kuoppala <miku@iki.fi>
+
+	* 0.07:	Long option parsing. Typo fixes by James.
+
+	* 0.08:	Long option parsing now behind define. 
+	Some systems are missing getopt_long :( This has to 
+	solved out more general way in future.
+
+	* 0.09: pthread_init_attr, pthread_destroy_attr 
+	were missing. Sami noticed this with Irix
+
+	* 0.10: Makefile cleanup. _GNU_SOURCE and _REENTRANT added 
+	to tiotest.c for correct behaviour of system header files.
+
+	* 0.11: tiobench.pl by James added to distribution. Changes to
+	output formatting in tiotest.c.
+
+1999-12-02       Mika Kuoppala <miku@iki.fi>
+
+	* 0.12:	Sequential writing is now an option.
+	This prevents write phase fragmentation of test files. 
+	Suggested by Jakob
+
+1999-12-04       Mika Kuoppala <miku@iki.fi>
+
+	* 0.13:	Tiobench.pl has now seeks as an option, 
+	It also finds tiotest better. Few other minor fixes and 
+	typos corrected.
+
+1999-12-05       James Manning <jmm@users.sf.net>
+
+	* 0.14: Minor tiobench.pl cleanups
+
+1999-12-07       Mika Kuoppala <miku@iki.fi>
+	
+	* 0.15: Seeks are now truely random and unique for each thread.
+
+2000-01-04       James Manning <jmm@users.sf.net>
+
+	* 0.16: tiobench.pl now figures default filesize by peeking 
+	available physical ram.
+
+2000-02-04       Mika Kuoppala <miku@iki.fi>
+
+	* 0.20:	 Makefile is now hopefully more portable.
+	Rewrote the random seeks handling totally. It can now handle
+	systems with 15bit RAND_MAX correctly.
+	Added system and user time as an measured value.
+	Rewrote output for both verbose and terse options.
+	Quick hacked tiobench.pl to accept new terse output.
+	Minor cleanups and fixes here and there.
+	Moved tiobench.sh to funnyscripts directory in order to
+	lessen confusion among users.
+	Added BUGS file into distribution.
+
+2000-02-04       Mika Kuoppala <miku@iki.fi>
+
+	* 0.21	 Few fixes in output handling.
+	James found out that in glibc 2.1.(x<3) rand_r is broken.
+	This should be fixed by how tiotest handles rand_r now.
+
+2000-02-12       James Manning <jmm@users.sf.net>
+
+	* 0.22	   - slightly modify tiotest.c output for easier parsing
+	- generalize perl parsing of tiotest output
+	- generalize output stats calculations (loop)
+	- calc and output CPU %
+
+2000-02-14       James Manning <jmm@users.sf.net>
+
+	* 0.23	   - added --numruns parameter for averaging runs
+	- update run-time prompting to include run number
+	- s/raleigh.ibm.com/computer.org/g for email address
+	- clarify rand_r issue
+	- corrected Mika's misspelled "misspellings" (how ironic! :)
+	- added header to tiobench.pl for nicer look
+	- comment entries in @tiotest_places
+
+2000-02-16       Peter Palfrader <ppalfrad@cosy.sbg.ac.at>
+
+	* 0.24	 - prompt to STDERR and not printing ^H s any more
+	- minor tiobench.pl cleanup by James
+
+2000-03-02       James Manning <jmm@users.sf.net>
+
+	* 0.25	 - add optional use of mmap()-based IO ifdef'd on USE_MMAP
+	- add optional use of madvise() to control kernel paging USE_MADVISE
+
+2000-03-14       James Manning <jmm@users.sf.net>
+
+	* 0.26	 - removed funnyscripts/ that were no longer functional
+	- renamed funnyscripts/ to scripts/
+	- scripts/makeimage.pl for automated gnuplot of read rate vs. threads
+	- rewrite scripts/README for update
+	- added Gregory Leblanc's Makefile "install and "uninstall" targets
+	- s/-f/-d/ in targets for dir instead of file check
+
+2000-03-16       Mika Kuoppala <miku@iki.fi>
+
+	* 0.27	 - preliminary large file support
+	- threads compete on system wide basis now on Solaris
+	- scripts/bigbench.pl submitted by 
+	Christian Robottom Reis <kiko@radiumsystems.com.br>
+	- minor change in random number generation
+
+2000-03-20	 Mika Kuoppala <miku@iki.fi>
+
+	* 0.28	 - some tiotest.c code cleanup
+	- -W option removed from tiobench.pl to force write side
+	being concurrent also
+	- updated TODO list
+
+2000-03-21	 Mika Kuoppala <miku@iki.fi>
+
+	* 0.29pre1 - random write testing added
+	- project name change to tiobench :)
+
+2000-03-21	 James Manning <jmm@users.sf.net>
+
+	* 0.29	 - rename tiotest -s to -r (seeks -> random)
+	- rename tiobench --seeks to --random
+	- add working --help to tiobench.pl
+	- remove useless --raw option from tiobench.pl
+	- go back to previous $prompt during tiotest runs
+	- add --nofrag option to pass -W to tiotest
+	- tiobench parsing and output change for random {read,write}
+	- s/finnish/finish/g in tiotest.c
+	- change tiotest.c output printing for random {read,write}
+
+2000-03-29	 Mika Kuoppala <miku@iki.fi>
+
+	* 0.3.0 - consistency checking option for test data files
+
+2000-05-14       Mika Kuoppala <miku@iki.fi>
+
+	* 0.3.1 - added load balancing feature for test directories
+	contributed by David_Major@btc.adaptec.com
+
+2001-01-25       Vladislav Bolkhovitine <vlad@sw.com.sg>
+
+	* 0.3.2 - added latency measurements with small statistical
+	processing, raw (/dev/raw??) devices support, sync threads on running 
+	(thread creation overhead time is removed from measured time) +
+	some minor changes (O_SYNC support, extended command line, etc.)
+
+2001-02-13       Vladislav Bolkhovitine <vlad@sw.com.sg>
+
+	* 0.3.2 - fixed sequential writing + added some input parameters
+	check + added -o and -O options for raw devices.
+
+2002-03-13       James Manning <jmm@users.sf.net>
+
+	* 0.3.3 - Randy Hron's updates with some small mods

@@ -1,0 +1,8 @@
+#!/bin/sh
+cd /mnt/nfs/drv/
+insmod disp.ko
+cd /dev
+mknod disp c 253 0
+mknod fb0 c 29 0
+cd /mnt/nfs/drv/test
+./dt_capture

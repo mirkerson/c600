@@ -1,0 +1,5 @@
+config BR2_PACKAGE_EXT4_UTILS
+	bool "ext4 utils"
+	depends on BR2_PACKAGE_ZLIB
+	help
+	  Ext4 utils from android

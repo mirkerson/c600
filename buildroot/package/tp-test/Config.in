@@ -1,0 +1,4 @@
+config BR2_PACKAGE_TP_TEST
+       bool "tp-test"
+       help
+         Some test program for touchscreen

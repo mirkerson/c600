@@ -1,0 +1,6 @@
+config BR2_PACKAGE_MALI_3D_R2P3
+       bool "mali 3d(r2p3)"
+       help
+         Mali 3d
+
+

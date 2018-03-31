@@ -1,0 +1,4 @@
+config BR2_PACKAGE_LCD_TEST
+       bool "lcd-test"
+       help
+         Some test program for LCD
